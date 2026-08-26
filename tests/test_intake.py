@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from src.classifier.schemas import ClassificationResult
+from src.documents import service as documents_service
 from src.intake import service
 from src.intake.gmail_client import Attachment, EmailMessage, iter_attachment_parts
 
@@ -44,6 +45,29 @@ def test_process_inbox_saves_supported_attachments(monkeypatch):
 
 def test_process_inbox_empty_inbox_is_noop():
     assert service.process_inbox(FakeGmail([])) == []
+
+
+def test_process_inbox_isolates_failed_message(monkeypatch):
+    from src.config import settings
+
+    def flaky_classify(document_id, filename, **kw):
+        if filename == "msa-v1.docx":
+            raise RuntimeError("bad API key")
+        return ClassificationResult(is_contract_revision=True, confidence=0.9, reasoning="stub")
+
+    monkeypatch.setattr(service, "classify_and_log", flaky_classify)
+    fake = FakeGmail([
+        _msg("m1", "MSA v1 redline", [Attachment("msa-v1.docx", b"docx")]),
+        _msg("m2", "MSA v2 redline", [Attachment("msa-v2.docx", b"docx")]),
+    ])
+
+    docs = service.process_inbox(fake)
+
+    assert [d.filename for d in docs] == ["msa-v2.docx"]
+    assert [d.filename for d in documents_service.list_documents()] == ["msa-v2.docx"]
+    assert fake.processed == ["m2"]  # m1 stays unread for retry, m2 is done
+    remaining_files = list(settings.files_dir.iterdir())
+    assert len(remaining_files) == 1  # msa-v1's saved file was rolled back
 
 
 def test_iter_attachment_parts_finds_nested_and_top_level_attachments():

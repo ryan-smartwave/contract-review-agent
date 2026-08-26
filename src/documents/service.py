@@ -43,3 +43,10 @@ def save_document(
 def list_documents() -> list[Document]:
     with db.get_session() as session:
         return list(session.exec(select(Document).order_by(Document.detected_at.desc())))
+
+
+def delete_document(doc: Document) -> None:
+    Path(doc.file_path).unlink(missing_ok=True)
+    with db.get_session() as session:
+        session.delete(session.get(Document, doc.id))
+        session.commit()

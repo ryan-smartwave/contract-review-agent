@@ -36,3 +36,10 @@ def test_documents_list_includes_upload(client):
     resp = client.get("/documents")
     assert resp.status_code == 200
     assert [d["filename"] for d in resp.json()] == ["nda.pdf"]
+
+
+def test_document_detected_at_is_serialized_as_utc(client):
+    client.post("/upload", files={"file": ("nda.pdf", b"%PDF-", "application/pdf")})
+    resp = client.get("/documents")
+    detected_at = resp.json()[0]["detected_at"]
+    assert detected_at.endswith("+00:00") or detected_at.endswith("Z")
