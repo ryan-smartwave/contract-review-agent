@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from src.classifier.schemas import ClassificationResult
 from src.intake import service
-from src.intake.gmail_client import Attachment, EmailMessage
+from src.intake.gmail_client import Attachment, EmailMessage, iter_attachment_parts
 
 
 class FakeGmail:
@@ -44,3 +44,45 @@ def test_process_inbox_saves_supported_attachments(monkeypatch):
 
 def test_process_inbox_empty_inbox_is_noop():
     assert service.process_inbox(FakeGmail([])) == []
+
+
+def test_iter_attachment_parts_finds_nested_and_top_level_attachments():
+    payload = {
+        "mimeType": "multipart/mixed",
+        "parts": [
+            {
+                "mimeType": "multipart/alternative",
+                "parts": [
+                    {"mimeType": "text/plain", "body": {"data": "aGk="}},
+                    {
+                        "mimeType": "multipart/related",
+                        "parts": [
+                            {
+                                "filename": "inline-nested.docx",
+                                "body": {"attachmentId": "att-nested"},
+                            }
+                        ],
+                    },
+                ],
+            },
+            {
+                "filename": "top-level.pdf",
+                "body": {"attachmentId": "att-top"},
+            },
+        ],
+    }
+    found = list(iter_attachment_parts(payload))
+    filenames = {p["filename"] for p in found}
+    assert filenames == {"inline-nested.docx", "top-level.pdf"}
+    assert len(found) == 2
+
+
+def test_iter_attachment_parts_no_attachments_yields_nothing():
+    payload = {
+        "mimeType": "multipart/alternative",
+        "parts": [
+            {"mimeType": "text/plain", "body": {"data": "aGk="}},
+            {"mimeType": "text/html", "body": {"data": "aGk="}},
+        ],
+    }
+    assert list(iter_attachment_parts(payload)) == []

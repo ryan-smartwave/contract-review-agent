@@ -21,6 +21,17 @@ class EmailMessage:
     attachments: list[Attachment] = field(default_factory=list)
 
 
+def iter_attachment_parts(payload: dict):
+    """Yield every part in the payload tree that has both a filename and a
+    body attachmentId, walking nested multipart parts recursively."""
+    filename = payload.get("filename")
+    att_id = payload.get("body", {}).get("attachmentId")
+    if filename and att_id:
+        yield payload
+    for part in payload.get("parts", []):
+        yield from iter_attachment_parts(part)
+
+
 class GmailClientProtocol(Protocol):
     def fetch_unread_with_attachments(self) -> list[EmailMessage]: ...
     def mark_processed(self, message_id: str) -> None: ...
@@ -46,14 +57,14 @@ class GmailClient:
         headers = {h["name"].lower(): h["value"] for h in msg["payload"]["headers"]}
         received = datetime.fromtimestamp(int(msg["internalDate"]) / 1000, tz=timezone.utc)
         attachments = []
-        for part in msg["payload"].get("parts", []):
-            filename = part.get("filename")
-            att_id = part.get("body", {}).get("attachmentId")
-            if filename and att_id:
-                data = self._svc.users().messages().attachments().get(
-                    userId="me", messageId=message_id, id=att_id
-                ).execute()["data"]
-                attachments.append(Attachment(filename, base64.urlsafe_b64decode(data)))
+        for part in iter_attachment_parts(msg["payload"]):
+            filename = part["filename"]
+            att_id = part["body"]["attachmentId"]
+            data = self._svc.users().messages().attachments().get(
+                userId="me", messageId=message_id, id=att_id
+            ).execute()["data"]
+            padded = data + "=" * (-len(data) % 4)
+            attachments.append(Attachment(filename, base64.urlsafe_b64decode(padded)))
         return EmailMessage(
             message_id=message_id,
             subject=headers.get("subject", ""),
