@@ -10,6 +10,7 @@ from src.documents.db import init_db
 from src.documents.router import router as documents_router
 from src.intake.router import router as intake_router
 from src.intake.service import process_inbox
+from src.locator import router as locator_router
 
 logger = logging.getLogger(__name__)
 
@@ -49,3 +50,4 @@ app.add_middleware(
 )
 app.include_router(intake_router)
 app.include_router(documents_router)
+app.include_router(locator_router.router)
