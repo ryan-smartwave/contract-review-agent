@@ -17,11 +17,12 @@ class DriveClient:
 
     def search(self, q: str) -> list[DriveFile]:
         mime_clause = " or ".join(f"mimeType='{m}'" for m in CONTRACT_MIMES)
-        escaped = q.replace("'", r"\'")
+        escaped = q.replace("\\", "\\\\").replace("'", r"\'")
         listing = self._svc.files().list(
             q=f"name contains '{escaped}' and ({mime_clause}) and trashed=false",
             fields="files(id,name,modifiedTime,mimeType,webViewLink)",
             pageSize=10,
+            orderBy="modifiedTime desc",
         ).execute()
         return [
             DriveFile(
