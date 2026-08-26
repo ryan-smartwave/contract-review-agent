@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     gmail_poll_seconds: int = 30
     enable_gmail_poller: bool = False
 
-    model_config = {"env_file": ".env"}
+    model_config = {"env_file": ".env", "extra": "ignore"}
 
 
 settings = Settings()

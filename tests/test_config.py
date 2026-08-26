@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.config import settings
+from src.config import Settings, settings
 
 
 def test_settings_defaults():
@@ -8,3 +8,11 @@ def test_settings_defaults():
     assert settings.files_dir == Path("data/files")
     assert settings.gmail_poll_seconds == 30
     assert settings.enable_gmail_poller is False
+
+
+def test_settings_ignores_unknown_env_vars(monkeypatch):
+    """Test that unknown env vars don't cause ValidationError."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    # Should construct without error
+    test_settings = Settings()
+    assert test_settings.model_name == "anthropic:claude-sonnet-4-5"
