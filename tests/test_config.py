@@ -4,7 +4,11 @@ from src.config import Settings, settings
 
 
 def test_settings_defaults(test_db):
-    # test_db fixture patches files_dir; skip that check
+    # test_db fixture patches the global settings instance
+    # Use a fresh Settings() instance to verify defaults are not affected by fixture
+    fresh = Settings()
+    assert fresh.files_dir == Path("data/files")
+    # Verify other settings on the patched global instance
     assert settings.model_name.count(":") == 1  # "provider:model" form
     assert settings.gmail_poll_seconds == 30
     assert settings.enable_gmail_poller is False
