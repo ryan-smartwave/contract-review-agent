@@ -47,9 +47,51 @@ rejects each suggestion with one click.
 
 ## 4. Components
 
-One repo, three top-level pieces.
+**Multi-repo architecture** (decided by Ryan 2026-08-26):
 
-### `agent/` — LangGraph orchestrator
+- **`contract-review-agent`** (this repo) — Python backend: LangGraph
+  orchestrator + FastAPI server (A2A endpoint + REST). Domain-module layout
+  per [zhanymkanov/fastapi-best-practices](https://github.com/zhanymkanov/fastapi-best-practices):
+  each capability is a package with its own `router.py`, `schemas.py`,
+  `service.py`, `models.py`.
+- **`contract-review-web`** (separate repo) — Next.js UI. Feature-based
+  layout per [bulletproof-react](https://github.com/alan2207/bulletproof-react)
+  (`src/app`, `src/components`, `src/features/*`), with its unidirectional
+  import rule: shared → features → app; features never import each other.
+
+Backend repo structure:
+
+```
+src/
+├── main.py          # FastAPI entrypoint
+├── config.py        # settings, model provider selection
+├── a2a/             # agent card + A2A server wiring (a2a-sdk)
+├── graph/           # LangGraph orchestrator wiring the capability modules
+├── intake/          # capability domain modules — each with
+├── classifier/      #   router.py, schemas.py, service.py, models.py
+├── locator/
+├── reviewer/
+├── redliner/
+├── documents/       # document storage + versioning
+└── llm/             # init_chat_model factory (vendor-agnostic)
+tests/               # per-module tests, Gmail/Drive fixtures
+```
+
+Web repo structure:
+
+```
+src/
+├── app/             # Next.js app-router pages
+├── components/      # shared UI
+├── features/
+│   ├── review-queue/
+│   ├── document-viewer/   # suggestions, Apply/Reject, versions
+│   ├── upload/
+│   └── drive-search/
+├── lib/ config/ hooks/ types/ utils/
+```
+
+### Capabilities (LangGraph orchestrator)
 
 Each capability is its own module with a typed interface. These interfaces
 are the seams where capabilities later split into real A2A sub-agents.
@@ -78,14 +120,14 @@ are the seams where capabilities later split into real A2A sub-agents.
   rejecting one suggestion never disturbs the others (rows 11–13). This is
   the trickiest correctness point in the system and gets the densest tests.
 
-### `server/` — FastAPI
+### Server (FastAPI, same backend repo)
 
 - A2A endpoint + agent card via `a2a-sdk` (externally-triggered work — what
   Globe's gateway would route).
 - Plain REST for the UI's fine-grained interactions: upload, search,
   suggestion list, apply, reject, version history.
 
-### `web/` — Next.js UI
+### Web UI (Next.js, `contract-review-web` repo)
 
 - **Review queue** — contracts detected from email, with classification and
   the redlines-ready latency stat.
