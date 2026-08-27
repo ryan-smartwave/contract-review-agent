@@ -12,7 +12,7 @@ async def upload(file: UploadFile) -> DocumentOut:
     if not is_supported(file.filename or ""):
         raise HTTPException(422, "Unsupported file type. Upload a PDF or DOCX.")
     doc = save_document(await file.read(), file.filename, source="upload")
-    result = classify_and_log(doc.id, doc.filename)
+    result = classify_and_log(doc.id, doc.filename, source="upload")
     return DocumentOut(
         id=doc.id, filename=doc.filename, source=doc.source,
         mime_type=doc.mime_type, detected_at=doc.detected_at,

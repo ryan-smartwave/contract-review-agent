@@ -38,3 +38,24 @@ def test_classify_negative_case():
     ))
     result = service.classify_and_log(doc.id, doc.filename, subject="August deals!", llm=fake)
     assert result.is_contract_revision is False
+
+
+def test_upload_classification_prompt_has_no_email_fields():
+    doc = save_document(b"x", "Apex_Draft.pdf", source="upload")
+    fake = FakeStructuredLLM(ClassificationResult(
+        is_contract_revision=True, confidence=0.9, reasoning="Draft filename.",
+    ))
+    service.classify_and_log(doc.id, doc.filename, source="upload", llm=fake)
+    prompt = fake.prompts[0]
+    assert "Apex_Draft.pdf" in prompt
+    assert "Email" not in prompt
+    assert "uploaded" in prompt
+
+
+def test_email_classification_prompt_keeps_email_fields():
+    doc = save_document(b"x", "msa.pdf", source="email")
+    fake = FakeStructuredLLM(ClassificationResult(
+        is_contract_revision=True, confidence=0.9, reasoning="ok",
+    ))
+    service.classify_and_log(doc.id, doc.filename, subject="Re: MSA", body="see attached", llm=fake)
+    assert "Email subject: Re: MSA" in fake.prompts[0]
