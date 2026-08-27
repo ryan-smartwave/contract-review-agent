@@ -49,13 +49,15 @@ A checked box means resolved; unchecked means open, with where the fix lands.
 
 - [ ] Home page has no fetch error boundary — if the backend is down, Next.js
       shows its error page. *Demo ops: start backend first. Phase 2: error state.*
-- [ ] Backend CORS is pinned to `http://localhost:3000` — web app must run on
-      port 3000 exactly. *Demo ops note.*
+- [x] Backend CORS origins come from the `CORS_ORIGINS` env var (comma-separated;
+      defaults to `http://localhost:3000`) — deployed frontends must be listed
+      there. *(env-configurable since 2026-08-27)*
 - [ ] With the poller enabled and missing/invalid Google credentials, the app
       fails fast at startup (by design; error message is a stack trace). *Phase 2:
       friendlier startup error.*
 - [ ] Partial intake rollback can orphan `ClassificationLog` rows (harmless —
-      no FK, no crash). *Phase 2: FK/cascade.*
+      no FK, no crash); an email-path review failure can similarly orphan
+      `DocumentVersion` rows. *Phase 2: FK/cascade.*
 - [ ] Toolchain pinned: Node 20.15.0 forces Vitest 3/Vite 7 in the web repo.
       *Upgrade Node ≥ 20.19 to unpin.*
 - [ ] Review quality is ungrounded — suggestions come from general legal knowledge
@@ -68,6 +70,11 @@ A checked box means resolved; unchecked means open, with where the fix lands.
       demo assumption; no unique constraint on `(document_id, version_number)`.
       *Accepted demo-scope risk 2026-08-27; mitigation known (re-check
       status/version inside the apply transaction).*
+- [ ] Agent card advertises a relative URL (`/a2a/`) — make it absolute via
+      config before any gateway integration (Phase 3).
+- [ ] A failed auto-review leaves `review_ready_at` null with no retry
+      mechanism or failed-state UI — re-upload/re-confirm to regenerate
+      (Phase 3 polish).
 
 ## Deferred by plan (not bugs)
 

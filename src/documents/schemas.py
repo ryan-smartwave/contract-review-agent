@@ -58,6 +58,11 @@ class VersionOut(BaseModel):
     source_suggestion_id: int | None
     created_at: datetime
 
+    @field_validator("created_at")
+    @classmethod
+    def _ensure_utc(cls, v: datetime) -> datetime:
+        return v.replace(tzinfo=timezone.utc) if v.tzinfo is None else v
+
 
 class DocumentDetailOut(DocumentOut):
     text: str

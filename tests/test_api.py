@@ -93,6 +93,8 @@ def test_document_detail_returns_text_suggestions_versions(client):
         {"version_number": 1, "source_suggestion_id": None, "created_at": body["versions"][0]["created_at"]}
     ]
     assert body["review_seconds"] is not None and body["review_seconds"] >= 0
+    created_at = body["versions"][0]["created_at"]
+    assert created_at.endswith("+00:00") or created_at.endswith("Z")
 
 
 def test_document_detail_404():
