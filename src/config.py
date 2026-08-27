@@ -1,6 +1,12 @@
 from pathlib import Path
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
+
+# Provider SDKs (anthropic, google-genai, openai) read their API keys from the
+# process environment; exporting .env here lets one file configure both them
+# and Settings.
+load_dotenv()
 
 
 class Settings(BaseSettings):
