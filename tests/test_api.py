@@ -43,3 +43,14 @@ def test_document_detected_at_is_serialized_as_utc(client):
     resp = client.get("/documents")
     detected_at = resp.json()[0]["detected_at"]
     assert detected_at.endswith("+00:00") or detected_at.endswith("Z")
+
+
+def test_upload_rolls_back_when_classification_fails(client, monkeypatch):
+    def boom(*a, **kw):
+        raise RuntimeError("provider down")
+
+    monkeypatch.setattr(intake_router, "classify_and_log", boom)
+    resp = client.post("/upload", files={"file": ("nda.pdf", b"%PDF-", "application/pdf")})
+    assert resp.status_code == 502
+    assert "classification failed" in resp.json()["detail"]
+    assert client.get("/documents").json() == []
