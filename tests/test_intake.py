@@ -32,6 +32,7 @@ def test_process_inbox_saves_supported_attachments(monkeypatch):
         lambda document_id, filename, **kw: ClassificationResult(
             is_contract_revision=True, confidence=0.9, reasoning="stub"),
     )
+    monkeypatch.setattr(service, "run_review", lambda *a, **kw: [])
     fake = FakeGmail([
         _msg("m1", "MSA v2 redline", [Attachment("msa-v2.docx", b"docx")]),
         _msg("m2", "Team photo", [Attachment("photo.png", b"png")]),
@@ -70,6 +71,7 @@ def test_process_inbox_isolates_failed_message(monkeypatch):
         return ClassificationResult(is_contract_revision=True, confidence=0.9, reasoning="stub")
 
     monkeypatch.setattr(service, "classify_and_log", flaky_classify)
+    monkeypatch.setattr(service, "run_review", lambda *a, **kw: [])
     fake = FakeGmail([
         _msg("m1", "MSA v1 redline", [Attachment("msa-v1.docx", b"docx")]),
         _msg("m2", "MSA v2 redline", [Attachment("msa-v2.docx", b"docx")]),
