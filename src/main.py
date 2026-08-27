@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.a2a_server.agent import build_a2a_app
 from src.config import settings
 from src.documents.db import init_db
 from src.documents.router import router as documents_router
@@ -53,3 +54,4 @@ app.include_router(intake_router)
 app.include_router(documents_router)
 app.include_router(locator_router.router)
 app.include_router(redliner_router.router)
+app.mount("/a2a", build_a2a_app())
