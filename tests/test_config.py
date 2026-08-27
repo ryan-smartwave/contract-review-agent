@@ -3,20 +3,24 @@ from pathlib import Path
 from src.config import Settings, settings
 
 
+def fresh_settings(**kwargs) -> Settings:
+    # _env_file=None keeps tests independent of any real .env in the repo root
+    return Settings(_env_file=None, **kwargs)
+
+
 def test_settings_defaults(test_db):
     # test_db fixture patches the global settings instance
-    # Use a fresh Settings() instance to verify defaults are not affected by fixture
-    fresh = Settings()
+    fresh = fresh_settings()
     assert fresh.files_dir == Path("data/files")
-    # Verify other settings on the patched global instance
-    assert settings.model_name.count(":") == 1  # "provider:model" form
-    assert settings.gmail_poll_seconds == 30
-    assert settings.enable_gmail_poller is False
+    assert fresh.model_name.count(":") == 1  # "provider:model" form
+    assert fresh.gmail_poll_seconds == 30
+    assert fresh.enable_gmail_poller is False
+    # The global instance stays usable regardless of local .env contents
+    assert settings.model_name.count(":") == 1
 
 
 def test_settings_ignores_unknown_env_vars(monkeypatch):
-    """Test that unknown env vars don't cause ValidationError."""
+    """Unknown env vars (provider API keys) must not cause ValidationError."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
-    # Should construct without error
-    test_settings = Settings()
+    test_settings = fresh_settings()
     assert test_settings.model_name == "anthropic:claude-sonnet-4-5"
