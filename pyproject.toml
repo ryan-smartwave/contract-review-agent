@@ -10,6 +10,7 @@ dependencies = [
     "langchain>=0.3",
     "langchain-anthropic>=0.2",
     "langchain-openai>=0.2",
+    "langchain-google-genai>=4.0",
     "google-api-python-client>=2.140",
     "google-auth-oauthlib>=1.2",
     "python-multipart>=0.0.9",
