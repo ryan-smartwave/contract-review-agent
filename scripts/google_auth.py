@@ -11,7 +11,18 @@ SCOPES = [
 ]
 
 
+def materialize_google_files() -> None:
+    """Write credentials/token files from env contents on headless deploys."""
+    for path, content in (
+        (settings.google_credentials_path, settings.google_credentials_json),
+        (settings.google_token_path, settings.google_token_json),
+    ):
+        if content and not path.exists():
+            path.write_text(content)
+
+
 def get_credentials() -> Credentials:
+    materialize_google_files()
     creds = None
     if settings.google_token_path.exists():
         creds = Credentials.from_authorized_user_file(

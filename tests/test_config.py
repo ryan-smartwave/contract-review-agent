@@ -28,3 +28,29 @@ def test_settings_ignores_unknown_env_vars(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
     test_settings = fresh_settings(monkeypatch)
     assert test_settings.model_name == "anthropic:claude-sonnet-4-5"
+
+
+def test_cors_origins_parse_to_list(monkeypatch):
+    s = fresh_settings(monkeypatch, cors_origins="http://localhost:3000, https://demo.vercel.app")
+    assert s.cors_origin_list == ["http://localhost:3000", "https://demo.vercel.app"]
+
+
+def test_google_files_materialize_from_env(tmp_path, monkeypatch):
+    from src.config import settings
+    from scripts.google_auth import materialize_google_files
+
+    cred_path = tmp_path / "credentials.json"
+    token_path = tmp_path / "token.json"
+    monkeypatch.setattr(settings, "google_credentials_path", cred_path)
+    monkeypatch.setattr(settings, "google_token_path", token_path)
+    monkeypatch.setattr(settings, "google_credentials_json", '{"installed": {}}')
+    monkeypatch.setattr(settings, "google_token_json", "")
+
+    materialize_google_files()
+    assert cred_path.read_text() == '{"installed": {}}'
+    assert not token_path.exists()  # empty env content writes nothing
+
+    # existing files are never overwritten
+    monkeypatch.setattr(settings, "google_credentials_json", '{"other": 1}')
+    materialize_google_files()
+    assert cred_path.read_text() == '{"installed": {}}'
