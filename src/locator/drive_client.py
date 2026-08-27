@@ -9,6 +9,7 @@ CONTRACT_MIMES = (
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.google-apps.document",
 )
+GOOGLE_DOC_MIME = "application/vnd.google-apps.document"
 
 
 class DriveClient:
@@ -32,3 +33,10 @@ class DriveClient:
             )
             for f in listing.get("files", [])
         ]
+
+    def download(self, file_id: str, mime_type: str) -> bytes:
+        if mime_type == GOOGLE_DOC_MIME:
+            return self._svc.files().export(
+                fileId=file_id, mimeType="application/pdf"
+            ).execute()
+        return self._svc.files().get_media(fileId=file_id).execute()
