@@ -87,6 +87,12 @@ def build_a2a_app() -> FastAPI:
     add_a2a_routes_to_fastapi(
         sub_app,
         agent_card_routes=create_agent_card_routes(card),
-        jsonrpc_routes=create_jsonrpc_routes(handler, rpc_url=RPC_URL),
+        # enable_v0_3_compat: defensive fallback so callers that omit the
+        # A2A-Version header (the SDK then assumes "0.3") aren't rejected
+        # with -32009 by the v1.0-only handler -- Globe's gateway is the
+        # caller here and we don't control what it sends.
+        jsonrpc_routes=create_jsonrpc_routes(
+            handler, rpc_url=RPC_URL, enable_v0_3_compat=True
+        ),
     )
     return sub_app
