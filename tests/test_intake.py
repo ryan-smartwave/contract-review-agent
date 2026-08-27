@@ -151,3 +151,17 @@ def test_extract_plain_body_nested_multipart():
 
 def test_extract_plain_body_none_returns_empty():
     assert extract_plain_body({"mimeType": "multipart/mixed", "parts": []}) == ""
+
+
+def test_process_inbox_runs_review_for_contract_revisions(monkeypatch):
+    reviewed = []
+    monkeypatch.setattr(
+        service, "classify_and_log",
+        lambda document_id, filename, **kw: ClassificationResult(
+            is_contract_revision=True, confidence=0.9, reasoning="stub"),
+    )
+    monkeypatch.setattr(service, "extract_text_preview", lambda *a, **kw: "TEXT")
+    monkeypatch.setattr(service, "run_review", lambda doc_id, text, **kw: reviewed.append(doc_id))
+    fake = FakeGmail([_msg("m1", "MSA", [Attachment("msa.docx", b"d")])])
+    docs = service.process_inbox(fake)
+    assert reviewed == [docs[0].id]

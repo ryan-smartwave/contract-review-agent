@@ -6,6 +6,7 @@ from src.classifier.service import classify_and_log
 from src.documents.extract import FULL_TEXT_MAX_CHARS, extract_text_preview
 from src.documents.schemas import DocumentOut
 from src.documents.service import delete_document, is_supported, save_document
+from src.reviewer.service import run_review
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,11 @@ async def upload(file: UploadFile) -> DocumentOut:
         raise HTTPException(
             502, "The document was received but classification failed. Please try again."
         )
+    if result.is_contract_revision:
+        try:
+            run_review(doc.id, text)
+        except Exception:
+            logger.exception("review failed for %s; suggestions unavailable", doc.filename)
     return DocumentOut(
         id=doc.id, filename=doc.filename, source=doc.source,
         mime_type=doc.mime_type, detected_at=doc.detected_at,
