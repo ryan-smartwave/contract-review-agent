@@ -30,6 +30,13 @@ sign in to each with GitHub SSO.
    `.venv\Scripts\python -m scripts.google_auth` and re-paste if it is ever
    revoked.
 4. Deploy. Verify `https://<railway-domain>/docs` loads.
+5. **Post-deploy check**: verify `/a2a/.well-known/agent-card.json` is
+   accessible at `https://<railway-domain>/a2a/.well-known/agent-card.json`.
+   This endpoint is required for Globe integration; it is served automatically
+   on redeploy.
+6. **Note on migrations**: a redeploy after Phase 2 runs an additive SQLite
+   migration automatically (`review_ready_at` column added to documents table).
+   No manual migration step is required.
 
 ⚠ With the poller enabled, the cloud instance processes the authorized inbox
 **24/7**, marking unread attachment emails as read. Switch the OAuth token to

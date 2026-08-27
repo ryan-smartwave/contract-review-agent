@@ -21,24 +21,17 @@ A checked box means resolved; unchecked means open, with where the fix lands.
 
 - [x] Classifies contract revisions vs. invoices/newsletters on honest traffic
 - [x] Decision + confidence + reasoning persisted and shown in UI
-- [ ] **Classifier never reads the document** — it sees only filename, subject,
-      and body snippet. A non-contract renamed `contract_revision.pdf`
-      classifies as a contract revision at high confidence (found by Ryan,
-      2026-08-27). *Fix: extract first pages' text (pypdf/python-docx) into the
-      classification prompt — first slice of row 8 (Phase 2). Note this in the
-      tracker row 2 Notes column.*
-- [ ] Email body passed to the classifier is Gmail's ~200-char snippet, not the
-      full body. *Fix alongside the item above (Phase 2).*
+- [x] **Classifier now reads document content** — extracts first pages' text
+      (pypdf/python-docx) into classification prompt (fixed 2026-08-27, Phase 2)
+- [x] Email body now passed in full to classifier (fixed 2026-08-27, Phase 2)
 
 ## Row 3 — Manual upload (Friday)
 
 - [x] PDF/DOCX upload through the UI, confirmation + classification shown
 - [x] Unsupported types rejected with a clear message
 - [x] File picker is an obvious click-to-browse dropzone (fixed 2026-08-27)
-- [ ] If the LLM call fails mid-upload, the document is saved but stuck as
-      "Classifying…" forever and the browser shows a raw fetch error. *Phase 2:
-      retry/cleanup path + friendlier error.*
-- [ ] No drag-and-drop onto the dropzone (click-to-browse only). *Phase 2 polish.*
+- [x] Upload failure rollback implemented (fixed 2026-08-27, Phase 2)
+- [x] Drag-and-drop support added to upload dropzone (fixed 2026-08-27, Phase 2)
 
 ## Rows 4 + 6 — Drive search & results display (Friday)
 
@@ -65,14 +58,24 @@ A checked box means resolved; unchecked means open, with where the fix lands.
       no FK, no crash). *Phase 2: FK/cascade.*
 - [ ] Toolchain pinned: Node 20.15.0 forces Vitest 3/Vite 7 in the web repo.
       *Upgrade Node ≥ 20.19 to unpin.*
+- [ ] Review quality is ungrounded — suggestions come from general legal knowledge
+      only, with no grounding in a legal-document pool. *Phase 3: add RAG over
+      legal-document corpus (source unconfirmed).*
+
+## Known limitations (Phase 2)
+
+- [ ] **Concurrent applies on the same document can lose an update** — single-writer
+      demo assumption; no unique constraint on `(document_id, version_number)`.
+      *Accepted demo-scope risk 2026-08-27; mitigation known (re-check
+      status/version inside the apply transaction).*
 
 ## Deferred by plan (not bugs)
 
-- [ ] **Row 5** — clarifying questions on ambiguous search (Phase 2)
-- [ ] **Row 7** — explicit contract selection/confirmation before review (Phase 2)
-- [ ] **Rows 8–13** — automatic review, pre-generated redlines + latency metric,
-      Apply/Reject UI, versioning + anchor rebasing (Phase 2)
-- [ ] **Row 14** — output format must be confirmed with the 917 team; current
-      proposal is new-version-per-apply. **Blocking `redliner` build — ask this week.**
-- [ ] A2A endpoint + agent card (Phase 2); gateway deferred until mock exists (per Juls)
+- [x] **Row 5** — clarifying questions on ambiguous search (shipped Phase 2)
+- [x] **Row 7** — explicit contract selection/confirmation before review (shipped Phase 2)
+- [x] **Rows 8–13** — automatic review, pre-generated redlines + latency metric,
+      Apply/Reject UI, versioning + anchor rebasing (shipped Phase 2)
+- [x] **Row 14** — 917 output format: proceeding with new-version-per-apply per
+      Ryan 2026-08-27 — confirm before Sept 7
+- [x] A2A endpoint + agent card (shipped Phase 2); gateway deferred until mock exists (per Juls)
 - [ ] RAG grounding over legal-document pool — corpus source unconfirmed (Phase 3)
