@@ -43,6 +43,20 @@ def test_process_inbox_saves_supported_attachments(monkeypatch):
     assert fake.processed == ["m1", "m2"]  # both marked, no error on m2
 
 
+def test_process_inbox_passes_extracted_text(monkeypatch):
+    captured = {}
+
+    def fake_classify(document_id, filename, **kw):
+        captured.update(kw)
+        return ClassificationResult(is_contract_revision=False, confidence=0.9, reasoning="x")
+
+    monkeypatch.setattr(service, "classify_and_log", fake_classify)
+    monkeypatch.setattr(service, "extract_text_preview", lambda content, fn, max_chars=50000: "EXTRACTED BODY TEXT")
+    fake = FakeGmail([_msg("m1", "s", [Attachment("a.pdf", b"pdf")])])
+    service.process_inbox(fake)
+    assert captured["document_text"] == "EXTRACTED BODY TEXT"
+
+
 def test_process_inbox_empty_inbox_is_noop():
     assert service.process_inbox(FakeGmail([])) == []
 

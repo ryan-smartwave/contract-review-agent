@@ -1,6 +1,7 @@
 import logging
 
 from src.classifier.service import classify_and_log
+from src.documents.extract import FULL_TEXT_MAX_CHARS, extract_text_preview
 from src.documents.models import Document
 from src.documents.service import delete_document, is_supported, save_document
 from src.intake.gmail_client import GmailClientProtocol
@@ -21,8 +22,12 @@ def process_inbox(client: GmailClientProtocol) -> list[Document]:
                     source="email", detected_at=message.received_at,
                 )
                 message_docs.append(doc)
+                text = extract_text_preview(
+                    attachment.content, attachment.filename, max_chars=FULL_TEXT_MAX_CHARS
+                )
                 classify_and_log(
-                    doc.id, doc.filename, subject=message.subject, body=message.body
+                    doc.id, doc.filename, subject=message.subject,
+                    body=message.body, document_text=text,
                 )
         except Exception:
             logger.exception("failed to process message %s; leaving unread for retry", message.message_id)

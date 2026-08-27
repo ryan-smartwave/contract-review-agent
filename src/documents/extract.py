@@ -6,6 +6,7 @@ logger = logging.getLogger(__name__)
 
 PREVIEW_MAX_CHARS = 4000
 PDF_PREVIEW_PAGES = 3
+FULL_TEXT_MAX_CHARS = 50_000
 
 
 def extract_text_preview(content: bytes, filename: str, max_chars: int = PREVIEW_MAX_CHARS) -> str:
