@@ -22,5 +22,8 @@ def test_settings_defaults(test_db):
 def test_settings_ignores_unknown_env_vars(monkeypatch):
     """Unknown env vars (provider API keys) must not cause ValidationError."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    # config.py exports .env into the process env at import; clear MODEL_NAME
+    # so this asserts the built-in default, not the developer's local choice
+    monkeypatch.delenv("MODEL_NAME", raising=False)
     test_settings = fresh_settings()
     assert test_settings.model_name == "anthropic:claude-sonnet-4-5"
