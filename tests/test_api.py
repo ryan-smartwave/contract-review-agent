@@ -2,18 +2,18 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.classifier.schemas import ClassificationResult
-from src.intake import router as intake_router
+from src.intake import pipeline
 from src.main import app
 
 
 @pytest.fixture
 def client(monkeypatch):
     monkeypatch.setattr(
-        intake_router, "classify_and_log",
+        pipeline, "classify_and_log",
         lambda document_id, filename, **kw: ClassificationResult(
             is_contract_revision=True, confidence=0.9, reasoning="stub"),
     )
-    monkeypatch.setattr(intake_router, "run_review", lambda *a, **kw: [])
+    monkeypatch.setattr(pipeline, "run_review", lambda *a, **kw: [])
     return TestClient(app)
 
 
@@ -50,7 +50,7 @@ def test_upload_rolls_back_when_classification_fails(client, monkeypatch):
     def boom(*a, **kw):
         raise RuntimeError("provider down")
 
-    monkeypatch.setattr(intake_router, "classify_and_log", boom)
+    monkeypatch.setattr(pipeline, "classify_and_log", boom)
     resp = client.post("/upload", files={"file": ("nda.pdf", b"%PDF-", "application/pdf")})
     assert resp.status_code == 502
     assert "classification failed" in resp.json()["detail"]
@@ -65,7 +65,7 @@ from src.reviewer import service as reviewer_service
 
 def test_upload_triggers_review_when_contract_revision(client, monkeypatch):
     calls = []
-    monkeypatch.setattr(intake_router, "run_review", lambda doc_id, text, **kw: calls.append((doc_id, text)))
+    monkeypatch.setattr(pipeline, "run_review", lambda doc_id, text, **kw: calls.append((doc_id, text)))
     client.post("/upload", files={"file": ("nda.pdf", b"%PDF-", "application/pdf")})
     assert len(calls) == 1
 

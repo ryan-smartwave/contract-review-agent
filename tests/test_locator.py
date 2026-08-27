@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
 
+from src.intake import pipeline
 from src.locator import router as locator_router
 from src.locator import service
 from src.locator.schemas import DriveFile
@@ -161,11 +162,11 @@ def test_confirm_downloads_classifies_and_reviews(monkeypatch):
     reviewed = []
     monkeypatch.setattr(locator_router, "get_drive_client", lambda: FakeDownloader())
     monkeypatch.setattr(
-        locator_router, "classify_and_log",
+        pipeline, "classify_and_log",
         lambda document_id, filename, **kw: ClassificationResult(
             is_contract_revision=True, confidence=0.9, reasoning="stub"),
     )
-    monkeypatch.setattr(locator_router, "run_review", lambda doc_id, text, **kw: reviewed.append(doc_id))
+    monkeypatch.setattr(pipeline, "run_review", lambda doc_id, text, **kw: reviewed.append(doc_id))
     resp = TestClient(app).post("/drive/confirm", json={
         "file_id": "f1", "name": "Acme Contract",
         "mime_type": "application/vnd.google-apps.document",
@@ -174,3 +175,15 @@ def test_confirm_downloads_classifies_and_reviews(monkeypatch):
     assert resp.json()["filename"] == "Acme Contract.pdf"
     assert resp.json()["source"] == "drive"
     assert len(reviewed) == 1
+
+
+def test_confirm_unsupported_mime_type_rejected():
+    client = TestClient(app)
+    before = client.get("/documents").json()
+    resp = client.post("/drive/confirm", json={
+        "file_id": "f1", "name": "photo.png",
+        "mime_type": "image/png",
+    })
+    assert resp.status_code == 422
+    assert "PDF, DOCX, or Google Doc" in resp.json()["detail"]
+    assert client.get("/documents").json() == before

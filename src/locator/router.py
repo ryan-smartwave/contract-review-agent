@@ -2,14 +2,12 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 
-from src.classifier.service import classify_and_log
-from src.documents.extract import FULL_TEXT_MAX_CHARS, extract_text_preview
 from src.documents.schemas import DocumentOut
-from src.documents.service import is_supported, save_document
+from src.documents.service import is_supported
+from src.intake import pipeline
 from src.locator.drive_client import GOOGLE_DOC_MIME
 from src.locator.schemas import DriveConfirmRequest, SearchResponse
 from src.locator.service import search_contracts
-from src.reviewer.service import run_review
 
 logger = logging.getLogger(__name__)
 
@@ -41,11 +39,12 @@ def drive_confirm(req: DriveConfirmRequest) -> DocumentOut:
         raise HTTPException(422, "Only PDF, DOCX, or Google Doc files can be reviewed.")
     content = get_drive_client().download(req.file_id, req.mime_type)
     logger.info("user confirmed drive file %s (%s)", req.name, req.file_id)
-    doc = save_document(content, filename, source="drive")
-    text = extract_text_preview(content, filename, max_chars=FULL_TEXT_MAX_CHARS)
-    result = classify_and_log(doc.id, doc.filename, source="upload", document_text=text)
-    if result.is_contract_revision:
-        run_review(doc.id, text)
+    try:
+        doc, result = pipeline.ingest_document(content, filename, source="drive")
+    except pipeline.ClassificationFailedError:
+        raise HTTPException(
+            502, "The document was received but classification failed. Please try again."
+        )
     return DocumentOut(
         id=doc.id, filename=doc.filename, source=doc.source,
         mime_type=doc.mime_type, detected_at=doc.detected_at,
