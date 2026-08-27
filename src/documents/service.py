@@ -6,7 +6,7 @@ from sqlmodel import select
 
 from src.config import settings
 from src.documents import db
-from src.documents.models import Document, utcnow
+from src.documents.models import Document, DocumentVersion, utcnow
 
 SUPPORTED_EXTENSIONS = {".pdf", ".docx"}
 MIME_TYPES = {
@@ -49,4 +49,56 @@ def delete_document(doc: Document) -> None:
     Path(doc.file_path).unlink(missing_ok=True)
     with db.get_session() as session:
         session.delete(session.get(Document, doc.id))
+        session.commit()
+
+
+def create_version(
+    document_id: int, text_content: str, source_suggestion_id: int | None = None
+) -> DocumentVersion:
+    with db.get_session() as session:
+        current = session.exec(
+            select(DocumentVersion)
+            .where(DocumentVersion.document_id == document_id)
+            .order_by(DocumentVersion.version_number.desc())
+        ).first()
+        version = DocumentVersion(
+            document_id=document_id,
+            version_number=(current.version_number + 1) if current else 1,
+            text_content=text_content,
+            source_suggestion_id=source_suggestion_id,
+        )
+        session.add(version)
+        session.commit()
+        session.refresh(version)
+    return version
+
+
+def latest_version(document_id: int) -> DocumentVersion | None:
+    with db.get_session() as session:
+        return session.exec(
+            select(DocumentVersion)
+            .where(DocumentVersion.document_id == document_id)
+            .order_by(DocumentVersion.version_number.desc())
+        ).first()
+
+
+def list_versions(document_id: int) -> list[DocumentVersion]:
+    with db.get_session() as session:
+        return list(session.exec(
+            select(DocumentVersion)
+            .where(DocumentVersion.document_id == document_id)
+            .order_by(DocumentVersion.version_number)
+        ))
+
+
+def get_document(document_id: int) -> Document | None:
+    with db.get_session() as session:
+        return session.get(Document, document_id)
+
+
+def mark_review_ready(document_id: int) -> None:
+    with db.get_session() as session:
+        doc = session.get(Document, document_id)
+        doc.review_ready_at = utcnow()
+        session.add(doc)
         session.commit()

@@ -15,3 +15,13 @@ class Document(SQLModel, table=True):
     mime_type: str
     detected_at: datetime = Field(default_factory=utcnow)
     created_at: datetime = Field(default_factory=utcnow)
+    review_ready_at: datetime | None = None
+
+
+class DocumentVersion(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    document_id: int = Field(index=True)
+    version_number: int
+    text_content: str
+    source_suggestion_id: int | None = None
+    created_at: datetime = Field(default_factory=utcnow)
