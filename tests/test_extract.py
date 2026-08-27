@@ -3,16 +3,32 @@ from io import BytesIO
 from src.documents.extract import extract_text_preview
 
 
-def tiny_pdf(text: str) -> bytes:
-    stream = f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET".encode()
+def tiny_pdf(text: str | list[str]) -> bytes:
+    texts = [text] if isinstance(text, str) else text
+    n_pages = len(texts)
+    font_obj_num = 3 + 2 * n_pages
+    page_obj_nums = [3 + 2 * i for i in range(n_pages)]
     objects = [
         b"<</Type/Catalog/Pages 2 0 R>>",
-        b"<</Type/Pages/Kids[3 0 R]/Count 1>>",
-        b"<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R"
-        b"/Resources<</Font<</F1 5 0 R>>>>>>",
-        b"<</Length " + str(len(stream)).encode() + b">>stream\n" + stream + b"\nendstream",
-        b"<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>",
+        (
+            f"<</Type/Pages/Kids[{' '.join(f'{n} 0 R' for n in page_obj_nums)}]"
+            f"/Count {n_pages}>>"
+        ).encode(),
     ]
+    for page_text in texts:
+        stream = f"BT /F1 12 Tf 72 720 Td ({page_text}) Tj ET".encode()
+        objects.append(
+            b"<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents "
+            + str(len(objects) + 1 + 1).encode()
+            + b" 0 R/Resources<</Font<</F1 "
+            + str(font_obj_num).encode()
+            + b" 0 R>>>>>>"
+        )
+        objects.append(
+            b"<</Length " + str(len(stream)).encode() + b">>stream\n" + stream + b"\nendstream"
+        )
+    objects.append(b"<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>")
+
     out = bytearray(b"%PDF-1.4\n")
     offsets = []
     for i, obj in enumerate(objects, start=1):
@@ -58,3 +74,9 @@ def test_unsupported_extension_returns_empty():
 
 def test_corrupt_pdf_returns_empty_not_error():
     assert extract_text_preview(b"%PDF-not really", "broken.pdf") == ""
+
+
+def test_pdf_preview_reads_beyond_three_pages_for_large_max_chars():
+    pages = [f"Page {i} marker text" for i in range(1, 6)]
+    preview = extract_text_preview(tiny_pdf(pages), "msa.pdf", max_chars=10_000)
+    assert "Page 4 marker text" in preview
