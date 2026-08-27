@@ -37,7 +37,17 @@ def apply_suggestion(suggestion_id: int) -> DocumentVersion:
         # capture while the session is open — instances detach on exit
         document_id = suggestion.document_id
         new_text = text.replace(suggestion.original_text, suggestion.replacement_text, 1)
-    return create_version(document_id, new_text, source_suggestion_id=suggestion_id)
+    try:
+        return create_version(document_id, new_text, source_suggestion_id=suggestion_id)
+    except Exception:
+        # invariant: a suggestion is "applied" only if its version exists —
+        # revert so a failed version creation leaves it retryable, not stuck.
+        with db.get_session() as session:
+            suggestion = session.get(Suggestion, suggestion_id)
+            suggestion.status = "pending"
+            session.add(suggestion)
+            session.commit()
+        raise
 
 
 def reject_suggestion(suggestion_id: int) -> Suggestion:

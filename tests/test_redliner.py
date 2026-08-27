@@ -81,3 +81,52 @@ def test_apply_endpoint_returns_detail_and_409s():
     resp2 = client.post(f"/suggestions/{s.id}/apply")
     assert resp2.status_code == 409
     assert client.post("/suggestions/99999/reject").status_code == 404
+
+
+def test_apply_reverts_to_pending_if_version_creation_fails(monkeypatch):
+    doc = _doc_with_text()
+    s = _suggestion(doc.id, "Venue is Manila.", "Venue is Singapore.")
+
+    original_create_version = service.create_version
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(service, "create_version", _boom)
+    with pytest.raises(RuntimeError):
+        service.apply_suggestion(s.id)
+
+    with db.get_session() as session:
+        assert session.get(Suggestion, s.id).status == "pending"
+    assert len(list_versions(doc.id)) == 1
+
+    # restore explicitly rather than monkeypatch.undo(), which would also
+    # unwind the autouse test_db fixture's engine/files_dir patches since
+    # they share this same monkeypatch instance
+    monkeypatch.setattr(service, "create_version", original_create_version)
+    version = service.apply_suggestion(s.id)
+    assert version.version_number == 2
+    with db.get_session() as session:
+        assert session.get(Suggestion, s.id).status == "applied"
+
+
+def test_apply_endpoint_stale_returns_409_via_http():
+    client = TestClient(app)
+    doc = _doc_with_text()
+    s1 = _suggestion(doc.id, "B. Liability is unlimited.", "B. Liability is capped.")
+    s2 = _suggestion(doc.id, "Liability is unlimited.", "conflicting change")
+    resp1 = client.post(f"/suggestions/{s1.id}/apply")
+    assert resp1.status_code == 200
+    resp2 = client.post(f"/suggestions/{s2.id}/apply")
+    assert resp2.status_code == 409
+    assert "stale" in resp2.json()["detail"].lower()
+
+
+def test_reject_endpoint_returns_detail_with_rejected_status():
+    client = TestClient(app)
+    doc = _doc_with_text()
+    s = _suggestion(doc.id, "Venue is Manila.", "Venue is Singapore.")
+    resp = client.post(f"/suggestions/{s.id}/reject")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["suggestions"][0]["status"] == "rejected"
