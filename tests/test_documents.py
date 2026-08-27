@@ -15,3 +15,14 @@ def test_save_and_list_document():
     with open(doc.file_path, "rb") as f:
         assert f.read() == b"%PDF-fake"
     assert [d.id for d in service.list_documents()] == [doc.id]
+
+
+def test_init_db_creates_missing_data_dir(tmp_path, monkeypatch):
+    from sqlmodel import create_engine
+
+    from src.documents import db
+
+    db_file = tmp_path / "nested" / "app.db"
+    monkeypatch.setattr(db, "engine", create_engine(f"sqlite:///{db_file.as_posix()}"))
+    db.init_db()
+    assert db_file.exists()

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from contextlib import contextmanager
 
 from sqlmodel import Session, SQLModel, create_engine
@@ -8,6 +10,9 @@ engine = create_engine(settings.database_url, connect_args={"check_same_thread":
 
 
 def init_db() -> None:
+    db_path = engine.url.database
+    if db_path and db_path != ":memory:":
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     SQLModel.metadata.create_all(engine)
 
 
