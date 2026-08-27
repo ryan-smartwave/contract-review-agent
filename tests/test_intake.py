@@ -124,3 +124,30 @@ def test_iter_attachment_parts_no_attachments_yields_nothing():
         ],
     }
     assert list(iter_attachment_parts(payload)) == []
+
+
+import base64
+
+from src.intake.gmail_client import extract_plain_body
+
+
+def _b64(text: str) -> str:
+    return base64.urlsafe_b64encode(text.encode()).decode().rstrip("=")
+
+
+def test_extract_plain_body_nested_multipart():
+    payload = {
+        "mimeType": "multipart/mixed",
+        "parts": [
+            {"mimeType": "multipart/alternative", "parts": [
+                {"mimeType": "text/plain", "body": {"data": _b64("Full body text here")}},
+                {"mimeType": "text/html", "body": {"data": _b64("<p>html</p>")}},
+            ]},
+            {"mimeType": "application/pdf", "filename": "a.pdf", "body": {"attachmentId": "x"}},
+        ],
+    }
+    assert extract_plain_body(payload) == "Full body text here"
+
+
+def test_extract_plain_body_none_returns_empty():
+    assert extract_plain_body({"mimeType": "multipart/mixed", "parts": []}) == ""

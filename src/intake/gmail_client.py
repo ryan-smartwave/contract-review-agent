@@ -21,6 +21,22 @@ class EmailMessage:
     attachments: list[Attachment] = field(default_factory=list)
 
 
+def extract_plain_body(payload: dict) -> str:
+    """Recursively find the first text/plain part's body.data (base64url,
+    padding-safe) and decode it; return "" if none."""
+    if payload.get("mimeType") == "text/plain":
+        data = payload.get("body", {}).get("data", "")
+        if data:
+            return base64.urlsafe_b64decode(data + "=" * (-len(data) % 4)).decode(
+                "utf-8", errors="replace"
+            )
+    for part in payload.get("parts", []):
+        text = extract_plain_body(part)
+        if text:
+            return text
+    return ""
+
+
 def iter_attachment_parts(payload: dict):
     """Yield every part in the payload tree that has both a filename and a
     body attachmentId, walking nested multipart parts recursively."""
@@ -68,7 +84,7 @@ class GmailClient:
         return EmailMessage(
             message_id=message_id,
             subject=headers.get("subject", ""),
-            body=msg.get("snippet", ""),
+            body=extract_plain_body(msg["payload"]) or msg.get("snippet", ""),
             received_at=received,
             attachments=attachments,
         )
