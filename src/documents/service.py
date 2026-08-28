@@ -7,6 +7,7 @@ from sqlmodel import select
 from src.config import settings
 from src.documents import db
 from src.documents.models import Document, DocumentVersion, utcnow
+from src.documents.render import render_docx
 
 SUPPORTED_EXTENSIONS = {".pdf", ".docx"}
 MIME_TYPES = {
@@ -61,12 +62,21 @@ def create_version(
             .where(DocumentVersion.document_id == document_id)
             .order_by(DocumentVersion.version_number.desc())
         ).first()
+        version_number = (current.version_number + 1) if current else 1
         version = DocumentVersion(
             document_id=document_id,
-            version_number=(current.version_number + 1) if current else 1,
+            version_number=version_number,
             text_content=text_content,
             source_suggestion_id=source_suggestion_id,
         )
+        if source_suggestion_id is not None:
+            doc = session.get(Document, document_id)
+            label = f"{Path(doc.filename).stem} - v{version_number}.docx"
+            settings.files_dir.mkdir(parents=True, exist_ok=True)
+            file_path = settings.files_dir / f"{uuid4().hex}.docx"
+            file_path.write_bytes(render_docx(text_content))
+            version.file_path = str(file_path)
+            version.filename = label
         session.add(version)
         session.commit()
         session.refresh(version)

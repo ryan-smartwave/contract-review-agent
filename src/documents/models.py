@@ -25,3 +25,5 @@ class DocumentVersion(SQLModel, table=True):
     text_content: str
     source_suggestion_id: int | None = None
     created_at: datetime = Field(default_factory=utcnow)
+    file_path: str | None = None
+    filename: str | None = None

@@ -22,6 +22,16 @@ def init_db() -> None:
             conn.commit()
         except OperationalError:
             pass
+        try:
+            conn.execute(sql_text("ALTER TABLE documentversion ADD COLUMN file_path VARCHAR"))
+            conn.commit()
+        except OperationalError:
+            pass
+        try:
+            conn.execute(sql_text("ALTER TABLE documentversion ADD COLUMN filename VARCHAR"))
+            conn.commit()
+        except OperationalError:
+            pass
 
 
 @contextmanager
