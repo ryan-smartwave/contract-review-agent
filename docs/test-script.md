@@ -55,26 +55,34 @@ proves. Tick as you go.
 
 Open the **Apex MSA** from the queue (click its filename).
 
-- [ ] 3.1 Contract text renders with the suggestions' original passages
-      highlighted; right panel lists suggestion cards, each with clause label,
+- [ ] 3.1 The **Review** tab shows the contract as a styled document
+      (paragraphs, centered title) with each pending suggestion rendered
+      inline as a tracked change — red struck-through original, green
+      replacement; right panel lists suggestion cards, each with clause label,
       struck-through original, replacement, rationale, and its **own
       Apply/Reject buttons** → **rows 8 + 10**
-- [ ] 3.2 Header shows **"redlines ready in Ns"** → **row 9**
-- [ ] 3.3 **Apply** the liability-cap suggestion → document text updates
-      immediately, card flips to green **applied**, version list gains
-      "v2 · from suggestion #N"; other pending cards untouched → **rows 11 + 13**
+- [ ] 3.2 Header shows **"redlines ready in Ns"**; the **Original document**
+      tab renders the untouched PDF/DOCX with its real styling → **row 9**
+- [ ] 3.3 **Apply** the liability-cap suggestion → the inline redline becomes
+      plain updated text, card flips to green **applied**, version list gains
+      "v2 · from suggestion #N" with a **download link labeled
+      "Apex-MSA-Revision-2 - v2.docx"**; other pending cards untouched
+      → **rows 11 + 13 + 14**
 - [ ] 3.4 **Reject** another suggestion → card marked **rejected**, still
       visible; document text unchanged; **no** new version → **row 12**
 - [ ] 3.5 Apply every remaining pending suggestion one by one → each lands,
-      one version per apply, no text corruption → **row 13**
-- [ ] 3.6 Repeat 3.1–3.3 briefly on the **Meridian NDA** (DOCX path)
+      one version per apply (v3, v4, … each with its own labeled download),
+      no text corruption → **row 13**
+- [ ] 3.6 Download **v2** → a valid Word file opens with the applied change
+      present; download **v1** → the original file, byte-identical → **row 14**
+- [ ] 3.7 Repeat 3.1–3.3 briefly on the **Meridian NDA** (DOCX path)
 
 ## 4. Consistency check *(row 14)*
 
 - [ ] 4.1 Across both documents: original file never modified; every Apply =
-      new version; behavior identical for PDF and DOCX → row 14's
-      "consistent format" criterion (**human step remains: confirm
-      new-version-per-apply with 917**)
+      a new version **and a new labeled file** (`<name> - v<n>.docx`);
+      behavior identical for PDF and DOCX → row 14 (output format
+      **confirmed by 917/Eris 2026-08-28**)
 
 ## 5. Drive search → clarify → confirm *(rows 4, 5, 6, 7)*
 
