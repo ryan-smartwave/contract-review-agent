@@ -100,3 +100,16 @@ def test_document_detail_returns_text_suggestions_versions(client):
 def test_document_detail_404():
     resp = TestClient(app).get("/documents/9999")
     assert resp.status_code == 404
+
+
+def test_document_file_served_with_original_mime(client):
+    resp = client.post("/upload", files={"file": ("nda.pdf", b"%PDF-original-bytes", "application/pdf")})
+    doc_id = resp.json()["id"]
+    file_resp = client.get(f"/documents/{doc_id}/file")
+    assert file_resp.status_code == 200
+    assert file_resp.content == b"%PDF-original-bytes"
+    assert file_resp.headers["content-type"].startswith("application/pdf")
+
+
+def test_document_file_404s(client):
+    assert client.get("/documents/9999/file").status_code == 404
