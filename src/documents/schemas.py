@@ -57,6 +57,7 @@ class VersionOut(BaseModel):
     version_number: int
     source_suggestion_id: int | None
     created_at: datetime
+    filename: str | None = None
 
     @field_validator("created_at")
     @classmethod
@@ -84,5 +85,11 @@ def document_detail(document_id: int) -> DocumentDetailOut:
         **base.model_dump(),
         text=version.text_content if version else "",
         suggestions=[SuggestionOut(**s.model_dump()) for s in list_suggestions(document_id)],
-        versions=[VersionOut(**v.model_dump()) for v in list_versions(document_id)],
+        versions=[
+            VersionOut(**{
+                **v.model_dump(),
+                "filename": v.filename or (doc.filename if v.version_number == 1 else None),
+            })
+            for v in list_versions(document_id)
+        ],
     )

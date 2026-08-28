@@ -90,11 +90,27 @@ def test_document_detail_returns_text_suggestions_versions(client):
     assert body["text"] == "Section 2. Liability is unlimited."
     assert body["suggestions"][0]["status"] == "pending"
     assert body["versions"] == [
-        {"version_number": 1, "source_suggestion_id": None, "created_at": body["versions"][0]["created_at"]}
+        {
+            "version_number": 1, "source_suggestion_id": None,
+            "created_at": body["versions"][0]["created_at"], "filename": "msa.pdf",
+        }
     ]
     assert body["review_seconds"] is not None and body["review_seconds"] >= 0
     created_at = body["versions"][0]["created_at"]
     assert created_at.endswith("+00:00") or created_at.endswith("Z")
+
+
+def test_document_detail_versions_show_filename_for_v1_and_applied_version(client):
+    from src.documents.service import create_version, mark_review_ready
+
+    doc = save_document(b"x", "msa.pdf", source="upload")
+    create_version(doc.id, "Section 2. Liability is unlimited.")
+    create_version(doc.id, "Section 2. Liability is capped.", source_suggestion_id=1)
+    mark_review_ready(doc.id)
+    resp = client.get(f"/documents/{doc.id}")
+    versions = resp.json()["versions"]
+    assert versions[0]["filename"] == "msa.pdf"
+    assert versions[1]["filename"] == "msa - v2.docx"
 
 
 def test_document_detail_404():
@@ -113,3 +129,44 @@ def test_document_file_served_with_original_mime(client):
 
 def test_document_file_404s(client):
     assert client.get("/documents/9999/file").status_code == 404
+
+
+def test_version_file_v1_serves_original(client):
+    from src.documents.service import create_version
+
+    resp = client.post("/upload", files={"file": ("nda.pdf", b"%PDF-original-bytes", "application/pdf")})
+    doc_id = resp.json()["id"]
+    create_version(doc_id, "Section 1. Term.")
+    file_resp = client.get(f"/documents/{doc_id}/versions/1/file")
+    assert file_resp.status_code == 200
+    assert file_resp.content == b"%PDF-original-bytes"
+    assert file_resp.headers["content-type"].startswith("application/pdf")
+    assert "nda.pdf" in file_resp.headers["content-disposition"]
+
+
+def test_version_file_applied_version_serves_docx_with_label(client):
+    from src.documents.service import create_version
+
+    resp = client.post("/upload", files={"file": ("msa.pdf", b"%PDF-", "application/pdf")})
+    doc_id = resp.json()["id"]
+    create_version(doc_id, "Section 2. Liability is unlimited.")
+    create_version(doc_id, "Section 2. Liability is capped.", source_suggestion_id=1)
+    file_resp = client.get(f"/documents/{doc_id}/versions/2/file")
+    assert file_resp.status_code == 200
+    assert file_resp.headers["content-type"].startswith(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+    assert "msa%20-%20v2.docx" in file_resp.headers["content-disposition"]
+
+
+def test_version_file_unknown_version_404s(client):
+    from src.documents.service import create_version
+
+    resp = client.post("/upload", files={"file": ("nda.pdf", b"%PDF-", "application/pdf")})
+    doc_id = resp.json()["id"]
+    create_version(doc_id, "Section 1. Term.")
+    assert client.get(f"/documents/{doc_id}/versions/99/file").status_code == 404
+
+
+def test_version_file_unknown_document_404s(client):
+    assert client.get("/documents/9999/versions/1/file").status_code == 404

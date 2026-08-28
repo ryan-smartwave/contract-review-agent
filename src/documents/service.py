@@ -106,6 +106,15 @@ def get_document(document_id: int) -> Document | None:
         return session.get(Document, document_id)
 
 
+def get_version(document_id: int, version_number: int) -> DocumentVersion | None:
+    with db.get_session() as session:
+        return session.exec(
+            select(DocumentVersion)
+            .where(DocumentVersion.document_id == document_id)
+            .where(DocumentVersion.version_number == version_number)
+        ).first()
+
+
 def mark_review_ready(document_id: int) -> None:
     with db.get_session() as session:
         doc = session.get(Document, document_id)
