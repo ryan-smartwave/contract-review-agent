@@ -15,10 +15,11 @@ proves. Tick as you go.
 - [ ] ⚠ Quota check: each review costs Gemini calls. If suggestions fail to
       appear later, check the backend log for `429` — free-tier quota resets
       daily (midnight PT)
-- [ ] Drive setup (for Part 5): upload **Apex-MSA-Revision-2.pdf** and
-      **Meridian-NDA-Amendment-1.docx** to the authorized account's My Drive —
-      both names contain no shared keyword, so also note both match the
-      keyword `revision`
+- [ ] Drive setup (for Part 5): upload **Apex-MSA-Revision-2.pdf**,
+      **Meridian-NDA-Amendment-1.docx**, and **contract_revision.pdf** to the
+      authorized account's My Drive. Search is name-based, so `revision`
+      matches the two files with "revision" in the name (→ clarifying banner)
+      while `meridian` matches exactly one (→ no banner)
 
 ## 1. Email intake → redlines waiting *(rows 1, 2, 8, 9 — the headline)*
 
@@ -77,10 +78,10 @@ Open the **Apex MSA** from the queue (click its filename).
 
 ## 5. Drive search → clarify → confirm *(rows 4, 5, 6, 7)*
 
-- [ ] 5.1 On `/search`, search **`revision`** (matches both Drive files) →
-      ranked results with name + modified date + Open-in-Drive link **and** the
-      banner *"I found 2 contracts matching 'revision'. Which one should I
-      review?"* → **rows 4 + 6 + 5(ask)**
+- [ ] 5.1 On `/search`, search **`revision`** (matches Apex-MSA-Revision-2.pdf
+      and contract_revision.pdf by name) → ranked results with name + modified
+      date + Open-in-Drive link **and** the banner *"I found 2 contracts
+      matching 'revision'. Which one should I review?"* → **rows 4 + 6 + 5(ask)**
 - [ ] 5.2 Search **`meridian`** (matches one) → single result, **no banner**
       → **row 5 (don't ask when unambiguous)**
 - [ ] 5.3 Search **`zzzqq`** → "No matching contracts found" → **row 6**

@@ -14,6 +14,10 @@ from src.intake.service import process_inbox
 from src.locator import router as locator_router
 from src.redliner import router as redliner_router
 
+# uvicorn only configures its own loggers; without this, app-level INFO
+# (classification results, drive confirmations, poller activity) is dropped
+logging.basicConfig(level=logging.INFO)
+
 logger = logging.getLogger(__name__)
 
 
