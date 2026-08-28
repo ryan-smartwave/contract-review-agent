@@ -71,6 +71,8 @@ def create_version(
         )
         if source_suggestion_id is not None:
             doc = session.get(Document, document_id)
+            if doc is None:
+                raise LookupError(f"Document {document_id} not found")
             label = f"{Path(doc.filename).stem} - v{version_number}.docx"
             settings.files_dir.mkdir(parents=True, exist_ok=True)
             file_path = settings.files_dir / f"{uuid4().hex}.docx"

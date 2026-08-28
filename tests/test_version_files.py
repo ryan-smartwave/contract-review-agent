@@ -3,7 +3,7 @@ from io import BytesIO
 from docx import Document
 
 from src.documents import db
-from src.documents.service import create_version, save_document
+from src.documents.service import create_version, get_version, save_document
 from src.redliner import service
 from src.reviewer.models import Suggestion
 
@@ -45,8 +45,9 @@ def test_apply_suggestion_writes_labeled_version_file():
         assert f.read() == b"original-bytes"
 
 
-def test_first_version_has_no_file():
+def test_v1_has_no_file():
     doc = _doc_with_text()
-    first = create_version(doc.id, "more text", source_suggestion_id=None)
-    assert first.file_path is None
-    assert first.filename is None
+    v1 = get_version(doc.id, 1)
+    assert v1.source_suggestion_id is None
+    assert v1.file_path is None
+    assert v1.filename is None

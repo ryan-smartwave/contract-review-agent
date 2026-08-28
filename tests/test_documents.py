@@ -28,6 +28,23 @@ def test_init_db_creates_missing_data_dir(tmp_path, monkeypatch):
     assert db_file.exists()
 
 
+def test_init_db_is_idempotent_and_adds_version_file_columns(tmp_path, monkeypatch):
+    from sqlalchemy import inspect
+    from sqlmodel import create_engine
+
+    from src.documents import db
+
+    db_file = tmp_path / "fresh.db"
+    engine = create_engine(f"sqlite:///{db_file.as_posix()}", connect_args={"check_same_thread": False})
+    monkeypatch.setattr(db, "engine", engine)
+
+    db.init_db()
+    db.init_db()  # must be safe to call twice
+
+    columns = {c["name"] for c in inspect(engine).get_columns("documentversion")}
+    assert {"file_path", "filename"}.issubset(columns)
+
+
 def test_versions_auto_increment_and_latest():
     doc = service.save_document(b"x", "msa.pdf", source="upload")
     v1 = service.create_version(doc.id, "original text")

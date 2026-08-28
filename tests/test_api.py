@@ -170,3 +170,26 @@ def test_version_file_unknown_version_404s(client):
 
 def test_version_file_unknown_document_404s(client):
     assert client.get("/documents/9999/versions/1/file").status_code == 404
+
+
+def test_version_file_v2_without_file_path_404s(client):
+    from src.documents.service import create_version
+
+    resp = client.post("/upload", files={"file": ("nda.pdf", b"%PDF-", "application/pdf")})
+    doc_id = resp.json()["id"]
+    create_version(doc_id, "Section 1. Term.")  # v1
+    create_version(doc_id, "Section 1. Term v2.")  # v2, no source_suggestion_id -> no file_path
+    assert client.get(f"/documents/{doc_id}/versions/2/file").status_code == 404
+
+
+def test_version_file_missing_from_disk_404s(client):
+    from pathlib import Path
+
+    from src.documents.service import create_version
+
+    resp = client.post("/upload", files={"file": ("msa.pdf", b"%PDF-", "application/pdf")})
+    doc_id = resp.json()["id"]
+    create_version(doc_id, "Section 2. Liability is unlimited.")
+    version = create_version(doc_id, "Section 2. Liability is capped.", source_suggestion_id=1)
+    Path(version.file_path).unlink()
+    assert client.get(f"/documents/{doc_id}/versions/2/file").status_code == 404
