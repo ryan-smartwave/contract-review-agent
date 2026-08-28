@@ -1,6 +1,6 @@
 # Known Limitations & Follow-ups
 
-Status as of 2026-08-27. Friday scope = tracker rows 1–4, 6 (due 2026-08-28).
+Status as of 2026-08-28. Friday scope = tracker rows 1–4, 6 (due 2026-08-28).
 A checked box means resolved; unchecked means open, with where the fix lands.
 
 ## Row 1 — Gmail inbox monitoring (Friday)
@@ -75,6 +75,10 @@ A checked box means resolved; unchecked means open, with where the fix lands.
 - [ ] A failed auto-review leaves `review_ready_at` null with no retry
       mechanism or failed-state UI — re-upload/re-confirm to regenerate
       (Phase 3 polish).
+- [ ] Generated version files are plain general-format DOCX (no firm-specific
+      styling) — per 917 "general use case muna"; customize later.
+- [ ] Versions applied before 2026-08-28 (pre-migration rows) have no
+      downloadable file — they show as plain text in the version list.
 
 ## Deferred by plan (not bugs)
 
@@ -82,7 +86,11 @@ A checked box means resolved; unchecked means open, with where the fix lands.
 - [x] **Row 7** — explicit contract selection/confirmation before review (shipped Phase 2)
 - [x] **Rows 8–13** — automatic review, pre-generated redlines + latency metric,
       Apply/Reject UI, versioning + anchor rebasing (shipped Phase 2)
-- [x] **Row 14** — 917 output format: proceeding with new-version-per-apply per
-      Ryan 2026-08-27 — confirm before Sept 7
+- [x] **Row 14** — output format confirmed by 917 (Eris) 2026-08-28:
+      new-version-per-apply plus a labeled new file per applied change
+      (e.g. `Contract - v2.docx`), general legal format — shipped 2026-08-28
 - [x] A2A endpoint + agent card (shipped Phase 2); gateway deferred until mock exists (per Juls)
 - [ ] RAG grounding over legal-document pool — corpus source unconfirmed (Phase 3)
+- [ ] Revision comparison — check the database for similar/prior contracts,
+      compare, and highlight changes (917 request 2026-08-28) — design drafted,
+      not yet built
