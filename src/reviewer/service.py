@@ -14,7 +14,8 @@ ambiguous obligations. Propose only changes that matter.
 For each suggestion:
 - clause: a short human label for where the change applies (e.g. "Section 2 - Liability").
 - original_text: an EXACT, VERBATIM excerpt copied from the contract text that should
-  be replaced. It must appear exactly once in the document. Keep it under 300 characters.
+  be replaced. It must appear exactly once in the document, must be copied from within
+  a single paragraph (never spanning a blank line), and must stay under 300 characters.
 - replacement_text: the full replacement for that excerpt.
 - rationale: one or two sentences on why.
 

@@ -80,3 +80,25 @@ def test_pdf_preview_reads_beyond_three_pages_for_large_max_chars():
     pages = [f"Page {i} marker text" for i in range(1, 6)]
     preview = extract_text_preview(tiny_pdf(pages), "msa.pdf", max_chars=10_000)
     assert "Page 4 marker text" in preview
+
+
+def test_docx_preserves_paragraph_breaks():
+    from tests.test_extract import tiny_docx  # noqa: F401  (module self-import guard)
+    from docx import Document as DocxDocument
+    buf = BytesIO()
+    doc = DocxDocument()
+    doc.add_paragraph("1. TERM. The   term is twelve months.")
+    doc.add_paragraph("2. LIABILITY. Liability is unlimited.")
+    doc.save(buf)
+    preview = extract_text_preview(buf.getvalue(), "msa.docx")
+    assert "1. TERM. The term is twelve months.\n\n2. LIABILITY. Liability is unlimited." == preview
+
+
+def test_pdf_splits_numbered_clauses_into_paragraphs():
+    pages = [["INTRO AGREEMENT TITLE", "1. TERM. Twelve months", "continued on same clause.", "2. FEES. Ninety days."]]
+    # one page, four layout lines
+    content = tiny_pdf(["INTRO AGREEMENT TITLE\n1. TERM. Twelve months\ncontinued on same clause.\n2. FEES. Ninety days."])
+    preview = extract_text_preview(content, "msa.pdf")
+    assert "INTRO AGREEMENT TITLE" in preview
+    assert "\n\n1. TERM. Twelve months continued on same clause." in preview
+    assert "\n\n2. FEES. Ninety days." in preview
