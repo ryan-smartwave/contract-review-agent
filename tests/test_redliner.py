@@ -208,3 +208,56 @@ def test_batch_endpoint_returns_detail_and_reports_stale():
     assert statuses[s1.id] == "applied"
     assert statuses[s2.id] == "rejected"
     assert len(body["versions"]) == 2
+
+
+def test_apply_batch_rejects_overlapping_or_duplicate_ids():
+    doc = _doc_with_text()
+    s = _suggestion(doc.id, "Venue is Manila.", "Venue is Singapore.")
+    with pytest.raises(ValueError):
+        service.apply_batch(doc.id, applied_ids=[s.id], rejected_ids=[s.id])
+    with pytest.raises(ValueError):
+        service.apply_batch(doc.id, applied_ids=[s.id, s.id], rejected_ids=[])
+    with db.get_session() as session:
+        assert session.get(Suggestion, s.id).status == "pending"  # nothing mutated
+    assert len(list_versions(doc.id)) == 1
+
+
+def test_apply_batch_reverts_all_statuses_if_version_creation_fails(monkeypatch):
+    doc = _doc_with_text()
+    s1 = _suggestion(doc.id, "B. Liability is unlimited.", "B. Liability is capped.")
+    s2 = _suggestion(doc.id, "Liability is unlimited.", "conflict")  # stale only because s1 applied first
+    s3 = _suggestion(doc.id, "Venue is Manila.", "Venue is Singapore.")
+    original_create_version = service.create_version
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(service, "create_version", _boom)
+    with pytest.raises(RuntimeError):
+        service.apply_batch(doc.id, applied_ids=[s1.id, s2.id], rejected_ids=[s3.id])
+    with db.get_session() as session:
+        for sid in (s1.id, s2.id, s3.id):
+            assert session.get(Suggestion, sid).status == "pending"
+    assert len(list_versions(doc.id)) == 1
+
+    # restore explicitly rather than monkeypatch.undo() — see the single-apply
+    # revert test above for why
+    monkeypatch.setattr(service, "create_version", original_create_version)
+    result = service.apply_batch(doc.id, applied_ids=[s1.id, s2.id], rejected_ids=[s3.id])
+    assert result.version.version_number == 2
+    assert result.stale_ids == [s2.id]
+
+
+def test_batch_endpoint_maps_missing_document_and_overlap_errors():
+    client = TestClient(app)
+    resp = client.post(
+        "/documents/99999/suggestions/batch", json={"applied_ids": [], "rejected_ids": []}
+    )
+    assert resp.status_code == 404
+    doc = _doc_with_text()
+    s = _suggestion(doc.id, "Venue is Manila.", "Venue is Singapore.")
+    resp = client.post(
+        f"/documents/{doc.id}/suggestions/batch",
+        json={"applied_ids": [s.id], "rejected_ids": [s.id]},
+    )
+    assert resp.status_code == 422

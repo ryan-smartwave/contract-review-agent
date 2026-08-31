@@ -40,8 +40,10 @@ def apply(suggestion_id: int) -> DocumentDetailOut:
 def batch(document_id: int, body: BatchIn) -> DocumentDetailOut:
     try:
         apply_batch(document_id, body.applied_ids, body.rejected_ids)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
     except LookupError:
-        raise HTTPException(404, "Suggestion not found for this document")
+        raise HTTPException(404, "Document or suggestion not found for this document")
     except AlreadyActionedError as exc:
         raise HTTPException(409, f"Suggestion already {exc}")
     return document_detail(document_id)

@@ -67,7 +67,9 @@ migration needed for new tables.
    against the new document for `added`/`modified`, `before_text`
    against the matched document's latest version text for
    `removed`/`modified`.
-   Failing changes are dropped, not shown.
+   Failing changes are dropped, not shown. Validation runs against the
+   same `FULL_TEXT_MAX_CHARS`-capped texts the LLM saw, so uniqueness is
+   judged in the window the excerpts came from.
 5. Persist `Comparison` + surviving `ComparisonChange` rows,
    `status="ready"`.
 

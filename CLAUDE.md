@@ -35,6 +35,7 @@ separate `contract-review-web` repo.
   rule: shared → features → app; features never import each other.
 - Model calls only via LangChain `init_chat_model` (provider from config) —
   never a vendor SDK directly.
-- Documents are immutable: every Confirm & save creates a new version
-  (one version per confirmed batch of accepted redlines).
+- Documents are immutable: every Confirm & save (or legacy single Apply)
+  creates a new version — one version per confirmed batch of accepted
+  redlines.
 - The Agent Gateway is Globe's, not ours; our boundary is the A2A endpoint.

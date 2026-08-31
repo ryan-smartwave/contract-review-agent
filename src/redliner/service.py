@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
 from src.documents import db
-from src.documents.models import DocumentVersion
+from src.documents.models import Document, DocumentVersion
 from src.documents.service import create_version, latest_version
 from src.reviewer.models import Suggestion
 
@@ -59,11 +59,16 @@ class BatchResult:
 
 
 def apply_batch(document_id: int, applied_ids: list[int], rejected_ids: list[int]) -> BatchResult:
+    all_ids = [*applied_ids, *rejected_ids]
+    if len(set(all_ids)) != len(all_ids):
+        raise ValueError("applied_ids and rejected_ids must be disjoint and free of duplicates")
     applied: list[int] = []
     stale_ids: list[int] = []
     with db.get_session() as session:
+        if session.get(Document, document_id) is None:
+            raise LookupError(document_id)
         suggestions = {}
-        for suggestion_id in [*applied_ids, *rejected_ids]:
+        for suggestion_id in all_ids:
             suggestion = _get_pending(session, suggestion_id)
             if suggestion.document_id != document_id:
                 raise LookupError(suggestion_id)
@@ -88,10 +93,11 @@ def apply_batch(document_id: int, applied_ids: list[int], rejected_ids: list[int
     try:
         new_version = create_version(document_id, text, render_file=True)
     except Exception:
-        # invariant: suggestions are "applied" only if their version exists —
-        # revert so a failed version creation leaves them retryable, not stuck.
+        # invariant: a batch's statuses stand only if its version exists — revert
+        # everything (stale marks were computed against text that now never
+        # existed) so the identical confirm is retryable, not stuck.
         with db.get_session() as session:
-            for suggestion_id in applied:
+            for suggestion_id in all_ids:
                 suggestion = session.get(Suggestion, suggestion_id)
                 suggestion.status = "pending"
                 session.add(suggestion)

@@ -69,7 +69,16 @@ A checked box means resolved; unchecked means open, with where the fix lands.
 - [ ] **Concurrent applies on the same document can lose an update** — single-writer
       demo assumption; no unique constraint on `(document_id, version_number)`.
       *Accepted demo-scope risk 2026-08-27; mitigation known (re-check
-      status/version inside the apply transaction).*
+      status/version inside the apply transaction).* Batch confirms
+      (2026-09-01) share this risk — two concurrent confirms can collide on
+      the version number, and now a whole batch (not one apply) can be lost.
+      A process crash between the batch's status commit and version creation
+      leaves suggestions "applied" with no version (the revert only covers
+      in-process exceptions).
+- [ ] Batch confirm returns 200 with no explicit `stale_ids` — a skipped
+      stale anchor is only visible by diffing suggestion statuses in the
+      returned detail (the web UI surfaces a notice this way). *Demo-scope;
+      add `stale_ids` to the response if a richer client needs it.*
 - [ ] Agent card advertises a relative URL (`/a2a/`) — make it absolute via
       config before any gateway integration (Phase 3).
 - [ ] A failed auto-review leaves `review_ready_at` null with no retry
