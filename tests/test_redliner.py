@@ -130,3 +130,81 @@ def test_reject_endpoint_returns_detail_with_rejected_status():
     assert resp.status_code == 200
     body = resp.json()
     assert body["suggestions"][0]["status"] == "rejected"
+
+
+def test_apply_batch_creates_single_version_with_all_changes():
+    doc = _doc_with_text()
+    s1 = _suggestion(doc.id, "Term is 12 months.", "Term is 24 months.")
+    s2 = _suggestion(doc.id, "Venue is Manila.", "Venue is Singapore.")
+    s3 = _suggestion(doc.id, "Liability is unlimited.", "Liability is capped.")
+    result = service.apply_batch(doc.id, applied_ids=[s1.id, s2.id], rejected_ids=[s3.id])
+    assert result.version.version_number == 2
+    assert "Term is 24 months." in result.version.text_content
+    assert "Venue is Singapore." in result.version.text_content
+    assert "Liability is unlimited." in result.version.text_content  # rejected, untouched
+    assert len(list_versions(doc.id)) == 2  # one confirm -> one version
+    with db.get_session() as session:
+        assert session.get(Suggestion, s1.id).status == "applied"
+        assert session.get(Suggestion, s2.id).status == "applied"
+        assert session.get(Suggestion, s3.id).status == "rejected"
+
+
+def test_apply_batch_reject_only_creates_no_version():
+    doc = _doc_with_text()
+    s = _suggestion(doc.id, "Venue is Manila.", "Venue is Singapore.")
+    result = service.apply_batch(doc.id, applied_ids=[], rejected_ids=[s.id])
+    assert result.version is None
+    assert len(list_versions(doc.id)) == 1
+    with db.get_session() as session:
+        assert session.get(Suggestion, s.id).status == "rejected"
+
+
+def test_apply_batch_skips_stale_anchor_and_applies_rest():
+    doc = _doc_with_text()
+    s1 = _suggestion(doc.id, "B. Liability is unlimited.", "B. Liability is capped.")
+    s2 = _suggestion(doc.id, "Liability is unlimited.", "conflicting change")
+    s3 = _suggestion(doc.id, "Venue is Manila.", "Venue is Singapore.")
+    result = service.apply_batch(doc.id, applied_ids=[s1.id, s2.id, s3.id], rejected_ids=[])
+    assert result.stale_ids == [s2.id]
+    assert result.version.version_number == 2
+    assert "B. Liability is capped." in result.version.text_content
+    assert "Venue is Singapore." in result.version.text_content
+    with db.get_session() as session:
+        assert session.get(Suggestion, s2.id).status == "stale"
+
+
+def test_apply_batch_renders_labeled_version_file():
+    doc = _doc_with_text()
+    s = _suggestion(doc.id, "Venue is Manila.", "Venue is Singapore.")
+    result = service.apply_batch(doc.id, applied_ids=[s.id], rejected_ids=[])
+    assert result.version.filename == "msa - v2.docx"
+    assert result.version.file_path is not None
+
+
+def test_apply_batch_validates_ids_belong_and_pending():
+    doc = _doc_with_text()
+    other = _doc_with_text()
+    s_other = _suggestion(other.id, "Venue is Manila.", "Venue is Singapore.")
+    with pytest.raises(LookupError):
+        service.apply_batch(doc.id, applied_ids=[s_other.id], rejected_ids=[])
+    s = _suggestion(doc.id, "Venue is Manila.", "Venue is Singapore.")
+    service.reject_suggestion(s.id)
+    with pytest.raises(service.AlreadyActionedError):
+        service.apply_batch(doc.id, applied_ids=[s.id], rejected_ids=[])
+
+
+def test_batch_endpoint_returns_detail_and_reports_stale():
+    client = TestClient(app)
+    doc = _doc_with_text()
+    s1 = _suggestion(doc.id, "Term is 12 months.", "Term is 24 months.")
+    s2 = _suggestion(doc.id, "Venue is Manila.", "Venue is Singapore.")
+    resp = client.post(
+        f"/documents/{doc.id}/suggestions/batch",
+        json={"applied_ids": [s1.id], "rejected_ids": [s2.id]},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    statuses = {s["id"]: s["status"] for s in body["suggestions"]}
+    assert statuses[s1.id] == "applied"
+    assert statuses[s2.id] == "rejected"
+    assert len(body["versions"]) == 2

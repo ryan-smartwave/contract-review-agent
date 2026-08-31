@@ -1,3 +1,5 @@
+from dataclasses import dataclass, field
+
 from src.documents import db
 from src.documents.models import DocumentVersion
 from src.documents.service import create_version, latest_version
@@ -48,6 +50,54 @@ def apply_suggestion(suggestion_id: int) -> DocumentVersion:
             session.add(suggestion)
             session.commit()
         raise
+
+
+@dataclass
+class BatchResult:
+    version: DocumentVersion | None
+    stale_ids: list[int] = field(default_factory=list)
+
+
+def apply_batch(document_id: int, applied_ids: list[int], rejected_ids: list[int]) -> BatchResult:
+    applied: list[int] = []
+    stale_ids: list[int] = []
+    with db.get_session() as session:
+        suggestions = {}
+        for suggestion_id in [*applied_ids, *rejected_ids]:
+            suggestion = _get_pending(session, suggestion_id)
+            if suggestion.document_id != document_id:
+                raise LookupError(suggestion_id)
+            suggestions[suggestion_id] = suggestion
+        version = latest_version(document_id)
+        text = version.text_content if version else ""
+        for suggestion_id in applied_ids:
+            suggestion = suggestions[suggestion_id]
+            if text.count(suggestion.original_text) != 1:
+                suggestion.status = "stale"
+                stale_ids.append(suggestion_id)
+            else:
+                text = text.replace(suggestion.original_text, suggestion.replacement_text, 1)
+                suggestion.status = "applied"
+                applied.append(suggestion_id)
+        for suggestion_id in rejected_ids:
+            suggestions[suggestion_id].status = "rejected"
+        session.add_all(suggestions.values())
+        session.commit()
+    if not applied:
+        return BatchResult(version=None, stale_ids=stale_ids)
+    try:
+        new_version = create_version(document_id, text, render_file=True)
+    except Exception:
+        # invariant: suggestions are "applied" only if their version exists —
+        # revert so a failed version creation leaves them retryable, not stuck.
+        with db.get_session() as session:
+            for suggestion_id in applied:
+                suggestion = session.get(Suggestion, suggestion_id)
+                suggestion.status = "pending"
+                session.add(suggestion)
+            session.commit()
+        raise
+    return BatchResult(version=new_version, stale_ids=stale_ids)
 
 
 def reject_suggestion(suggestion_id: int) -> Suggestion:

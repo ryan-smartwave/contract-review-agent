@@ -54,8 +54,13 @@ def delete_document(doc: Document) -> None:
 
 
 def create_version(
-    document_id: int, text_content: str, source_suggestion_id: int | None = None
+    document_id: int,
+    text_content: str,
+    source_suggestion_id: int | None = None,
+    render_file: bool | None = None,
 ) -> DocumentVersion:
+    if render_file is None:
+        render_file = source_suggestion_id is not None
     with db.get_session() as session:
         current = session.exec(
             select(DocumentVersion)
@@ -69,7 +74,7 @@ def create_version(
             text_content=text_content,
             source_suggestion_id=source_suggestion_id,
         )
-        if source_suggestion_id is not None:
+        if render_file:
             doc = session.get(Document, document_id)
             if doc is None:
                 raise LookupError(f"Document {document_id} not found")
