@@ -100,6 +100,8 @@ A checked box means resolved; unchecked means open, with where the fix lands.
       (e.g. `Contract - v2.docx`), general legal format — shipped 2026-08-28
 - [x] A2A endpoint + agent card (shipped Phase 2); gateway deferred until mock exists (per Juls)
 - [ ] RAG grounding over legal-document pool — corpus source unconfirmed (Phase 3)
-- [ ] Revision comparison — check the database for similar/prior contracts,
-      compare, and highlight changes (917 request 2026-08-28) — design drafted,
-      not yet built
+- [x] Revision comparison — similar-contract match + LLM compare with validated
+      highlight anchors, "Compared with prior" tab (917 request 2026-08-28) —
+      shipped 2026-09-01
+- [ ] A failed or no-match comparison has no retry/regenerate path — re-upload
+      to regenerate (same demo-scope shape as failed auto-review).

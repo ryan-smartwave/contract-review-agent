@@ -1,10 +1,12 @@
 from fastapi.testclient import TestClient
 
+from src.classifier.schemas import ClassificationResult
 from src.comparator import service
 from src.comparator.models import Comparison, ComparisonChange
 from src.comparator.schemas import ChangeDraft, CompareResult, MatchResult
 from src.documents import db
 from src.documents.service import create_version, save_document
+from src.intake import pipeline
 from src.main import app
 
 
@@ -197,3 +199,38 @@ def test_comparison_endpoint_no_match_and_failed_have_empty_changes():
     assert body["status"] == "no_match"
     assert body["matched_document"] is None
     assert body["changes"] == []
+
+
+def _classified(is_revision=True):
+    return ClassificationResult(
+        is_contract_revision=is_revision, confidence=0.9, reasoning="r"
+    )
+
+
+def test_ingest_document_triggers_comparison_for_revisions(monkeypatch):
+    monkeypatch.setattr(pipeline, "classify_and_log", lambda *a, **kw: _classified())
+    monkeypatch.setattr(pipeline, "run_review", lambda *a, **kw: [])
+    calls = []
+    monkeypatch.setattr(pipeline, "run_comparison", lambda doc_id, text: calls.append((doc_id, text)))
+    doc, _ = pipeline.ingest_document(b"%PDF-1.4 fake", "new.pdf", source="upload")
+    assert calls and calls[0][0] == doc.id
+
+
+def test_ingest_document_skips_comparison_for_non_revisions(monkeypatch):
+    monkeypatch.setattr(pipeline, "classify_and_log", lambda *a, **kw: _classified(is_revision=False))
+    calls = []
+    monkeypatch.setattr(pipeline, "run_comparison", lambda *a, **kw: calls.append(a))
+    pipeline.ingest_document(b"%PDF-1.4 fake", "new.pdf", source="upload")
+    assert calls == []
+
+
+def test_ingest_document_survives_comparison_failure(monkeypatch):
+    monkeypatch.setattr(pipeline, "classify_and_log", lambda *a, **kw: _classified())
+    monkeypatch.setattr(pipeline, "run_review", lambda *a, **kw: [])
+
+    def boom(*a, **kw):
+        raise RuntimeError("comparison exploded")
+
+    monkeypatch.setattr(pipeline, "run_comparison", boom)
+    doc, result = pipeline.ingest_document(b"%PDF-1.4 fake", "new.pdf", source="upload")
+    assert doc.id is not None  # intake succeeded anyway

@@ -2,6 +2,7 @@ import logging
 
 from src.classifier.schemas import ClassificationResult
 from src.classifier.service import classify_and_log
+from src.comparator.service import run_comparison
 from src.documents.extract import FULL_TEXT_MAX_CHARS, extract_text_preview
 from src.documents.models import Document
 from src.documents.service import delete_document, save_document
@@ -30,4 +31,8 @@ def ingest_document(content: bytes, filename: str, source: str) -> tuple[Documen
             run_review(doc.id, text)
         except Exception:
             logger.exception("review failed for %s; suggestions unavailable", filename)
+        try:
+            run_comparison(doc.id, text)
+        except Exception:
+            logger.exception("comparison failed for %s; comparison unavailable", filename)
     return doc, result

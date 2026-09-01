@@ -1,6 +1,7 @@
 import logging
 
 from src.classifier.service import classify_and_log
+from src.comparator.service import run_comparison
 from src.documents.extract import FULL_TEXT_MAX_CHARS, extract_text_preview
 from src.documents.models import Document
 from src.documents.service import delete_document, is_supported, save_document
@@ -32,6 +33,12 @@ def process_inbox(client: GmailClientProtocol) -> list[Document]:
                 )
                 if result.is_contract_revision:
                     run_review(doc.id, text)
+                    try:
+                        run_comparison(doc.id, text)
+                    except Exception:
+                        logger.exception(
+                            "comparison failed for %s; comparison unavailable", doc.filename
+                        )
         except Exception:
             logger.exception("failed to process message %s; leaving unread for retry", message.message_id)
             for doc in message_docs:
