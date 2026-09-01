@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.a2a_server.agent import build_a2a_app
+from src.comparator.router import router as comparator_router
 from src.config import settings
 from src.documents.db import init_db
 from src.documents.router import router as documents_router
@@ -58,4 +59,5 @@ app.include_router(intake_router)
 app.include_router(documents_router)
 app.include_router(locator_router.router)
 app.include_router(redliner_router.router)
+app.include_router(comparator_router)
 app.mount("/a2a", build_a2a_app())

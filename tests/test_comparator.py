@@ -1,8 +1,11 @@
+from fastapi.testclient import TestClient
+
 from src.comparator import service
 from src.comparator.models import Comparison, ComparisonChange
 from src.comparator.schemas import ChangeDraft, CompareResult, MatchResult
 from src.documents import db
 from src.documents.service import create_version, save_document
+from src.main import app
 
 
 class FakeStructuredLLM:
@@ -149,3 +152,48 @@ def test_run_comparison_llm_failure_stores_failed_and_does_not_raise():
 def test_get_comparison_returns_none_before_any_run():
     doc = save_document(b"x", "new.pdf", source="upload")
     assert service.get_comparison(doc.id) is None
+
+
+def test_comparison_endpoint_404_for_missing_document():
+    client = TestClient(app)
+    assert client.get("/documents/99999/comparison").status_code == 404
+
+
+def test_comparison_endpoint_pending_before_any_run():
+    client = TestClient(app)
+    doc = save_document(b"x", "new.pdf", source="upload")
+    body = client.get(f"/documents/{doc.id}/comparison").json()
+    assert body == {"status": "pending", "matched_document": None, "summary": None, "changes": []}
+
+
+def test_comparison_endpoint_ready_includes_match_summary_and_changes():
+    prior = _prior_doc()
+    doc = save_document(b"x", "new.pdf", source="upload")
+    fake = FakeStructuredLLM(
+        MatchResult(matched_document_id=prior.id, reason="same"),
+        _compare_result(
+            ChangeDraft(kind="modified", clause="Term",
+                        before_text="Term is 12 months.", after_text="Term is 24 months.",
+                        note="Term doubled."),
+        ),
+    )
+    service.run_comparison(doc.id, NEW_TEXT, llm=fake)
+    body = TestClient(app).get(f"/documents/{doc.id}/comparison").json()
+    assert body["status"] == "ready"
+    assert body["matched_document"]["id"] == prior.id
+    assert body["matched_document"]["filename"] == "msa-2025.pdf"
+    assert body["summary"] == "Liability and term changed."
+    assert body["changes"] == [{
+        "kind": "modified", "clause": "Term",
+        "before_text": "Term is 12 months.", "after_text": "Term is 24 months.",
+        "note": "Term doubled.",
+    }]
+
+
+def test_comparison_endpoint_no_match_and_failed_have_empty_changes():
+    doc = save_document(b"x", "new.pdf", source="upload")
+    service.run_comparison(doc.id, NEW_TEXT, llm=None)  # no candidates -> no_match
+    body = TestClient(app).get(f"/documents/{doc.id}/comparison").json()
+    assert body["status"] == "no_match"
+    assert body["matched_document"] is None
+    assert body["changes"] == []
