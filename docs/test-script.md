@@ -103,12 +103,31 @@ Open the **Apex MSA** from the queue (click its filename).
 - [ ] 6.1 Open http://localhost:8000/a2a/.well-known/agent-card.json →
       JSON card, `"name": "Contract Review Agent"`, `find_contracts` skill
 
-## 7. Wrap up
+## 7. Revision comparison — "Compared with prior" tab
 
-- [ ] 7.1 Flip tracker rows 5, 7–13 to **Done**; row 14 to note "implemented —
+- [ ] 7.1 Upload an older MSA (e.g. **Apex-MSA-Revision-1.pdf**, or any
+      earlier contract in the kit) **as a contract revision** — this step
+      matters: a prior doc classified as *not* a revision never gets a
+      `DocumentVersion`, so it stays invisible to comparison matching (see
+      `docs/limitations.md`). Let review finish (redlines chip appears).
+- [ ] 7.2 Upload a revised version of the *same* contract (e.g.
+      **Apex-MSA-Revision-2.pdf**). Let review finish.
+- [ ] 7.3 Open the revised document's page → click the **"Compared with
+      prior"** tab. Expect: a header naming the matched prior filename, a
+      short summary of the differences, the document text with green
+      highlighted insertions/modifications, and a right-column list of
+      change cards (kind badge, before/after excerpts, one-line note)
+- [ ] 7.4 If no prior version exists to match against (or the two documents
+      aren't recognized as related), the tab instead shows the **"No similar
+      contract found"** empty state — this is expected, not a bug, when
+      there's nothing in the database to compare against
+
+## 8. Wrap up
+
+- [ ] 8.1 Flip tracker rows 5, 7–13 to **Done**; row 14 to note "implemented —
       awaiting 917 confirmation"
-- [ ] 7.2 Message 917 re: output format
-- [ ] 7.3 Choose the merge option (merge ⇒ deploys Railway + Vercel)
+- [ ] 8.2 Message 917 re: output format
+- [ ] 8.3 Choose the merge option (merge ⇒ deploys Railway + Vercel)
 
 **If something fails:** note the step number and what you saw (screenshot or
 backend log line) — each step maps to one capability, so the failing module is

@@ -105,3 +105,17 @@ A checked box means resolved; unchecked means open, with where the fix lands.
       shipped 2026-09-01
 - [ ] A failed or no-match comparison has no retry/regenerate path — re-upload
       to regenerate (same demo-scope shape as failed auto-review).
+- [ ] Comparison highlights are validated against the document text **at
+      comparison time** — if Confirm & save later creates a new version with
+      different text, the stored change anchors are not re-validated and can
+      go stale (same shape as the redline anchor-staleness risk above).
+- [ ] A prior contract classified as **NOT** a revision never gets a
+      `DocumentVersion` created for it via the review pipeline path, so it is
+      invisible to `select_match`'s candidate list (comparator matching only
+      considers documents with a version). *Demo flow must upload the prior
+      contract as a contract revision too* (see `docs/test-script.md` §8) —
+      re-classifying/backfilling versions for non-revision docs is Phase 3.
+- [ ] Upload and Drive-confirm requests now also wait synchronously on the two
+      comparison LLM calls (match + compare) in addition to the review call —
+      acceptable added latency for the demo; move comparison to a background
+      task if it grows.

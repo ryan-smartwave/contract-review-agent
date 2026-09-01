@@ -95,6 +95,10 @@ def _anchored(change: ChangeDraft, new_text: str, old_text: str) -> bool:
         return False
     if needs_before and not (change.before_text and old_text.count(change.before_text) == 1):
         return False
+    if change.kind == "added" and change.after_text and old_text.count(change.after_text) > 0:
+        return False
+    if change.kind == "modified" and change.before_text == change.after_text:
+        return False
     return True
 
 

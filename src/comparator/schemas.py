@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 # --- LLM structured output ---
@@ -30,6 +30,11 @@ class MatchedDocumentOut(BaseModel):
     id: int
     filename: str
     detected_at: datetime
+
+    @field_validator("detected_at")
+    @classmethod
+    def _ensure_utc(cls, v: datetime) -> datetime:
+        return v.replace(tzinfo=timezone.utc) if v.tzinfo is None else v
 
 
 class ChangeOut(BaseModel):

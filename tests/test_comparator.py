@@ -140,6 +140,38 @@ def test_run_comparison_modified_requires_both_anchors():
     assert changes == []
 
 
+def test_run_comparison_added_dropped_when_after_text_already_in_old_text():
+    prior = _prior_doc()
+    doc = save_document(b"x", "new.pdf", source="upload")
+    fake = FakeStructuredLLM(
+        MatchResult(matched_document_id=prior.id, reason="same"),
+        _compare_result(
+            ChangeDraft(kind="added", clause="Not actually new",
+                        before_text=None, after_text="Section 2.",
+                        note="claims to be added but is verbatim in the old text"),
+        ),
+    )
+    service.run_comparison(doc.id, NEW_TEXT, llm=fake)
+    _, changes = service.get_comparison(doc.id)
+    assert changes == []
+
+
+def test_run_comparison_modified_dropped_when_before_equals_after():
+    prior = _prior_doc()
+    doc = save_document(b"x", "new.pdf", source="upload")
+    fake = FakeStructuredLLM(
+        MatchResult(matched_document_id=prior.id, reason="same"),
+        _compare_result(
+            ChangeDraft(kind="modified", clause="No actual change",
+                        before_text="Section 1.", after_text="Section 1.",
+                        note="claims modified but before == after (both anchor fine on their own)"),
+        ),
+    )
+    service.run_comparison(doc.id, NEW_TEXT, llm=fake)
+    _, changes = service.get_comparison(doc.id)
+    assert changes == []
+
+
 def test_run_comparison_llm_failure_stores_failed_and_does_not_raise():
     _prior_doc()
     doc = save_document(b"x", "new.pdf", source="upload")
@@ -190,6 +222,9 @@ def test_comparison_endpoint_ready_includes_match_summary_and_changes():
         "before_text": "Term is 12 months.", "after_text": "Term is 24 months.",
         "note": "Term doubled.",
     }]
+    # SQLite returns naive datetimes; the response must carry a UTC marker
+    # or JS will misparse it as local time (I1)
+    assert body["matched_document"]["detected_at"].endswith(("Z", "+00:00"))
 
 
 def test_comparison_endpoint_no_match_and_failed_have_empty_changes():
@@ -199,6 +234,15 @@ def test_comparison_endpoint_no_match_and_failed_have_empty_changes():
     assert body["status"] == "no_match"
     assert body["matched_document"] is None
     assert body["changes"] == []
+
+    failed_doc = save_document(b"x", "new2.pdf", source="upload")
+    _prior_doc(filename="msa-2025-other.pdf")
+    fake = FakeStructuredLLM(RuntimeError("provider down"))
+    service.run_comparison(failed_doc.id, NEW_TEXT, llm=fake)
+    failed_body = TestClient(app).get(f"/documents/{failed_doc.id}/comparison").json()
+    assert failed_body["status"] == "failed"
+    assert failed_body["matched_document"] is None
+    assert failed_body["changes"] == []
 
 
 def _classified(is_revision=True):
