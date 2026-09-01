@@ -23,8 +23,9 @@ Design spec: `docs/superpowers/specs/2026-08-26-contract-review-agent-design.md`
 **Multi-repo:** this repo is the Python backend; the Next.js UI lives in a
 separate `contract-review-web` repo.
 
-- This repo — LangGraph orchestrator + FastAPI (A2A endpoint + agent card via
-  a2a-sdk, REST for the UI). Capabilities (`intake`, `classifier`, `locator`,
+- This repo — FastAPI backend with a plain-Python pipeline (A2A endpoint +
+  agent card via a2a-sdk, REST for the UI); no LangGraph — capability services
+  call each other directly. Capabilities (`intake`, `classifier`, `locator`,
   `reviewer`, `redliner`) are domain modules under `src/`, each with its own
   `router.py` / `schemas.py` / `service.py` / `models.py`
   (per zhanymkanov/fastapi-best-practices) — these are the future A2A
